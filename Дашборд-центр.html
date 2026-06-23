@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3ede1;--paper-2:#fffaf0;--panel:#faf5ea;--panel-2:#f6efe2;
+  --ink:#241c14;--muted:#76796d;--faint:#9a9384;--line:rgba(40,28,18,.12);--line-2:rgba(40,28,18,.055);
+  --copper:#bd7655;--gold:#c08a43;--sage:#6f8b72;--coral:#df7e73;--blue:#5e8995;
+  --accent:var(--copper);--shadow:0 18px 50px rgba(24,26,23,.12);--shadow-sm:0 4px 14px rgba(24,26,23,.07);
+  --sidebar:#ece3d3;--sidebar-active:#fffaf0;--topbar:rgba(250,245,234,.9);--radius:13px;
+}
+html[data-theme="dark"]{
+  --paper:#1c1f23;--paper-2:#232830;--panel:#21262c;--panel-2:#262b32;
+  --ink:#e9e1d0;--muted:#919089;--faint:#6f736a;--line:rgba(180,185,170,.12);--line-2:rgba(180,185,170,.05);
+  --copper:#c7905d;--gold:#d4b988;--sage:#6fae8e;--coral:#df8f80;--blue:#6c9bd2;
+  --accent:var(--gold);--shadow:0 18px 50px rgba(0,0,0,.45);--shadow-sm:0 4px 14px rgba(0,0,0,.3);
+  --sidebar:#181b1f;--sidebar-active:#262c33;--topbar:rgba(28,31,35,.9);
+}
+*{box-sizing:border-box}html,body{height:100%}
+body{margin:0;font-family:"Manrope",system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;transition:background .35s,color .35s}
+
+/* ===================== LOGIN ===================== */
+.login{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:
+  radial-gradient(120% 80% at 80% -10%, rgba(189,118,85,.12), transparent 60%),
+  radial-gradient(100% 70% at -10% 110%, rgba(111,139,114,.12), transparent 55%), var(--paper);padding:20px}
+.login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:34px 30px 28px;text-align:center}
+.login-mark{width:46px;height:46px;border-radius:50%;margin:0 auto 16px;background:radial-gradient(circle at 32% 30%,var(--gold),var(--copper));box-shadow:0 0 0 6px rgba(192,138,67,.13)}
+.login-card h1{font-family:"Fraunces",serif;font-weight:600;font-size:26px;margin:0 0 4px}
+.login-card p{color:var(--muted);font-size:13.5px;margin:0 0 22px}
+.login-card label{display:block;text-align:left;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:0 0 6px}
+.login-card input{width:100%;height:44px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2);color:var(--ink);padding:0 14px;font:inherit;font-size:15px;margin-bottom:16px;outline:none;transition:.18s}
+.login-card input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(189,118,85,.16)}
+.login-btn{width:100%;height:46px;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:.18s}
+.login-btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+.login-err{color:var(--coral);font-size:13px;font-weight:600;min-height:18px;margin:2px 0 10px}
+.rp-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 8px}
+.rp-role{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2);color:var(--ink);cursor:pointer;font:inherit;font-size:13px;font-weight:600;text-align:left;transition:.15s}
+.rp-role:hover{border-color:var(--accent)}
+.rp-role.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ===================== APP ===================== */
+.app{display:none}
+.app.on{display:block}
+.topbar{position:sticky;top:0;z-index:30;height:56px;display:flex;align-items:center;gap:14px;padding:0 16px;background:var(--topbar);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-family:"Fraunces",serif;font-weight:600;font-size:16px;cursor:pointer}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 30% 30%,var(--gold),var(--copper));box-shadow:0 0 0 4px rgba(192,138,67,.14)}
+.spacer{flex:1}
+.search{position:relative;display:flex;align-items:center;max-width:240px;flex:1}
+.search input{width:100%;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink);padding:0 11px 0 31px;font:inherit;font-size:13px;outline:none;transition:.18s}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(189,118,85,.14)}
+.search svg{position:absolute;left:10px;width:15px;height:15px;opacity:.5}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 11px;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);color:var(--ink);cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;transition:.18s;white-space:nowrap}
+.btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.btn svg{width:15px;height:15px}
+.btn.ghost{border-color:transparent;background:transparent}
+.menu-toggle{display:none}
+
+.shell{display:grid;grid-template-columns:236px 1fr;min-height:calc(100vh - 56px)}
+.sidebar{background:var(--sidebar);border-right:1px solid var(--line);padding:12px 10px 36px;overflow-y:auto;max-height:calc(100vh - 56px);position:sticky;top:56px}
+.home-link{display:flex;align-items:center;gap:9px;width:100%;padding:10px 11px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;font:inherit;font-size:14px;font-weight:700;margin-bottom:10px;transition:.15s}
+.home-link:hover{border-color:var(--accent)}
+.home-link.active{background:var(--sidebar-active);box-shadow:var(--shadow-sm)}
+.group-label{font-family:"Fraunces",serif;font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--faint);padding:13px 11px 5px}
+.navitem{display:flex;align-items:center;gap:10px;width:100%;padding:8px 11px;border-radius:9px;border:0;background:transparent;color:var(--ink);cursor:pointer;font:inherit;font-size:13.5px;font-weight:600;text-align:left;transition:background .15s;margin-bottom:1px}
+.navitem:hover{background:var(--line-2)}
+.navitem.active{background:var(--sidebar-active);box-shadow:var(--shadow-sm)}
+.navitem .swatch{width:8px;height:8px;border-radius:2.5px;flex:none}
+.navitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navitem .sub{display:block;font-size:10.5px;color:var(--faint);font-weight:500}
+
+.main{position:relative;display:flex;flex-direction:column;min-width:0}
+.viewbar{display:none;align-items:center;gap:11px;padding:9px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+.viewbar.show{display:flex}
+.viewbar h2{margin:0;font-family:"Fraunces",serif;font-weight:600;font-size:16px}
+.viewbar .vsub{color:var(--muted);font-size:12px}
+.frame-wrap{flex:1;position:relative;background:var(--paper)}
+iframe.view{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--paper)}
+.loading{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)}
+.loading.show{display:flex}
+.ring{width:30px;height:30px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---- Project room (home) ---- */
+.room{padding:30px clamp(16px,3.5vw,46px) 56px;overflow-y:auto}
+.hero{max-width:680px;margin-bottom:8px}
+.hero .eyebrow{font-family:"Fraunces",serif;font-style:italic;color:var(--copper);font-size:15px;margin-bottom:6px}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(26px,3.4vw,36px);margin:0 0 8px;line-height:1.08}
+.hero p{color:var(--muted);font-size:14px;line-height:1.55;margin:0}
+.cat{margin-top:26px}
+.cat h3{font-family:"Fraunces",serif;font-weight:600;font-size:12.5px;letter-spacing:.5px;color:var(--faint);text-transform:uppercase;margin:0 0 11px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:11px}
+.card{position:relative;text-align:left;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:14px 15px 13px;cursor:pointer;font:inherit;color:var(--ink);transition:.18s;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cc,var(--copper))}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--cc,var(--copper))}
+.card .ic{font-size:20px;margin-bottom:7px;display:block}
+.card .ti{font-weight:700;font-size:14.5px;margin-bottom:3px}
+.card .de{color:var(--muted);font-size:12px;line-height:1.45}
+.card .go{margin-top:10px;font-size:11.5px;font-weight:700;color:var(--cc,var(--copper))}
+.note{color:var(--faint);font-size:12px;margin-top:24px;padding-top:14px;border-top:1px solid var(--line)}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:fixed;top:56px;left:0;bottom:0;width:262px;z-index:25;transform:translateX(-103%);transition:transform .28s;max-height:none}
+  .sidebar.open{transform:none;box-shadow:var(--shadow)}
+  .menu-toggle{display:inline-flex}
+  .backdrop{display:none;position:fixed;inset:56px 0 0;background:rgba(0,0,0,.35);z-index:24}
+  .backdrop.show{display:block}
+  .search{max-width:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== ВХОД ===================== -->
+<div class="login" id="login">
+  <form class="login-card" autocomplete="off" onsubmit="event.preventDefault();doLogin()">
+    <div class="login-mark"></div>
+    <h1>Project room</h1>
+    <p>Представься и войди, чтобы открыть свои комнаты.</p>
+    <label for="loginUser">Логин</label>
+    <input id="loginUser" type="text" placeholder="логин" autocomplete="off" name="pr_no_fill_user">
+    <label for="loginPass">Пароль</label>
+    <input id="loginPass" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="new-password" name="pr_no_fill_pass">
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" type="submit">Войти</button>
+  </form>
+</div>
+
+<!-- ===================== ВЫБОР РОЛИ ===================== -->
+<div class="login" id="rolepick" style="display:none">
+  <div class="login-card">
+    <div class="login-mark"></div>
+    <h1>Кто ты сегодня?</h1>
+    <p>Имя и роль запомним и подставим в дашборды.</p>
+    <label for="rpName">Имя</label>
+    <input id="rpName" type="text" placeholder="имя" autocomplete="off">
+    <label>Роль</label>
+    <div id="rpRoles" class="rp-roles"></div>
+    <div class="login-err" id="rpErr"></div>
+    <button class="login-btn" id="rpBtn" type="button">Продолжить</button>
+  </div>
+</div>
+
+<!-- ===================== ПРИЛОЖЕНИЕ ===================== -->
+<div class="app" id="app">
+  <div class="topbar">
+    <button class="btn ghost menu-toggle" id="menuToggle" aria-label="Меню"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+    <div class="brand" id="brandHome" title="На главную"><span class="dot"></span> Project room</div>
+    <div class="spacer"></div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="search" type="text" placeholder="Поиск комнаты…" autocomplete="off">
+    </div>
+    <button class="btn" id="openTab" title="Открыть комнату в новой вкладке" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 13v6H5V5h6"/></svg>В вкладке</button>
+    <button class="btn" id="refreshBtn" title="Обновить текущую комнату"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Обновить</button>
+    <button class="btn" id="roleBtn" title="Сменить имя и роль"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>Роль</button>
+    <button class="btn" id="themeBtn" title="Светлая / тёмная"><svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg><span id="themeLabel">Тёмная</span></button>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <button class="home-link active" id="homeLink">🏠 Project room</button>
+    </aside>
+    <main class="main">
+      <div class="viewbar" id="viewbar">
+        <button class="btn" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>Project room</button>
+        <div><h2 id="viewTitle">—</h2><div class="vsub" id="viewSub"></div></div>
+      </div>
+      <div class="frame-wrap" id="frameWrap">
+        <div class="room" id="room">
+          <div class="hero">
+            <div class="eyebrow" id="greeting">Добро пожаловать</div>
+            <h1>Твои комнаты</h1>
+            <p>Выбери комнату слева или карточку ниже — она откроется здесь же. Каждая комната — это твой готовый дашборд, он работает как раньше. Вернуться сюда можно в любой момент кнопкой «Project room».</p>
+          </div>
+          <div id="catalog"></div>
+          <div class="note" id="note"></div>
+        </div>
+        <iframe class="view" id="view" title="Комната" style="display:none"></iframe>
+        <div class="loading" id="loading"><div class="ring"></div><div>Открываю комнату…</div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="local-settings.js"></script>
+<script>
+/* ============================================================
+   ПАРОЛЬ ВХОДА в Project room — поменяй на свой.
+   Это лёгкий замок для удобства, а не серьёзная защита
+   (страница открывается локально). Настоящие секреты — на десктопе.
+   ============================================================ */
+const ROOM_LOGIN = "Singlecup";
+const ROOM_PASSWORD = "Coffeepod";
+
+/* Главная страница хаба = твой Project room. */
+const HOME_FILE = "Projects.html";
+
+/* Общий вход дашбордов. Хаб подставляет их сам, чтобы не вводить второй раз.
+   ВАЖНО: авто-вход работает только при запуске через localhost (launch.py).
+   При открытии файла двойным кликом (file://) браузер запрещает хабу
+   трогать форму внутри комнаты — тогда дашборд спросит вход сам. */
+const AUTO_LOGIN_USER = "Singlecup";
+const AUTO_LOGIN_PASSWORD = "Coffeepod";
+
+function autoLoginIntoFrame(iframe){
+  try{
+    const doc = iframe.contentDocument;
+    if(!doc) return;                                  // другой origin (file://) — дашборд спросит сам
+    const pass = doc.querySelector('input[type="password"]');
+    if(!pass || pass.offsetParent === null) return;   // поля нет или скрыто — уже внутри
+    const form = pass.closest('form') || doc;
+    const user = form.querySelector('input[type="text"], input[type="email"], input:not([type])');
+    if(user && user!==pass){
+      user.value = AUTO_LOGIN_USER;
+      user.dispatchEvent(new Event('input',{bubbles:true}));
+      user.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    pass.value = AUTO_LOGIN_PASSWORD;
+    pass.dispatchEvent(new Event('input',{bubbles:true}));
+    pass.dispatchEvent(new Event('change',{bubbles:true}));
+    if(form.requestSubmit){ try{ form.requestSubmit(); return; }catch(e){} }
+    const btn = form.querySelector('button, input[type="submit"], [role="button"]');
+    if(btn){ btn.click(); return; }
+    ['keydown','keypress','keyup'].forEach(t=>pass.dispatchEvent(
+      new KeyboardEvent(t,{key:'Enter',code:'Enter',keyCode:13,which:13,bubbles:true})));
+  }catch(e){ /* кросс-доменный фрейм — тихо пропускаем */ }
+}
+
+/* ---------- КОМНАТЫ ---------- */
+const ROOMS = [
+  { group:"Продажи и заказы", color:"var(--copper)", icon:"📦", items:[
+    { id:"om", name:"OM — Заказы", sub:"заказы и выручка", file:"OMDash.html", desc:"Заказы, статусы и оборот." },
+  ]},
+  { group:"Аналитика", color:"var(--sage)", icon:"📊", items:[
+    { id:"fox", name:"ФОКС", sub:"понятная аналитика", file:"foxdash.html", desc:"Главный сводный дашборд ФОКС." },
+    { id:"monkey", name:"MONKEY.BOT", sub:"бот-аналитика", file:"monkey_bot_dashboard.html", desc:"Панель показателей MONKEY.BOT." },
+  ]},
+  { group:"Реклама", color:"var(--gold)", icon:"🎯", items:[
+    { id:"ads", name:"SOWY ADS", sub:"реклама и контент", file:"ADSdash.html", desc:"Контент и рекламные показатели." },
+  ]},
+  { group:"Склад", color:"var(--blue)", icon:"🏷️", items:[
+    { id:"stock", name:"SOWY.STOCK", sub:"остатки и склад", file:"SOWY.html", desc:"Остатки и складская аналитика." },
+  ]},
+  { group:"Логистика · калькуляторы", color:"var(--coral)", icon:"🧮", items:[
+    { id:"ozon", name:"OZON — калькулятор", sub:"поставка OZON", file:"calcOZONlog.html", desc:"Калькулятор поставки OZON." },
+    { id:"wb", name:"WB — калькулятор", sub:"поставка WB", file:"calcWB.html", desc:"Калькулятор поставки Wildberries." },
+  ]},
+  { group:"Финансы", color:"var(--copper)", icon:"💰", items:[
+    { id:"pl", name:"P&L · 1С", sub:"прибыль и убытки", file:"index.html", desc:"Отчёт о прибылях и убытках." },
+  ]},
+  { group:"Академия", color:"var(--sage)", icon:"📚", items:[
+    { id:"academy", name:"Академия", sub:"регламенты и обучение", file:"регламенты/_База_регламентов/index.html", desc:"База регламентов, инструкции и обучающие материалы." },
+  ]},
+];
+const BY_ID={}; ROOMS.forEach(g=>g.items.forEach(it=>{it._group=g;BY_ID[it.id]=it;}));
+
+/* Карта «имя файла → комната». Нужна, чтобы кнопки «Дашборд» внутри Project room
+   открывали наши комнаты, а не внешние ссылки. */
+function baseName(u){
+  try{ u=String(u).split('#')[0].split('?')[0]; return decodeURIComponent(u.substring(u.lastIndexOf('/')+1)).toLowerCase(); }
+  catch(e){ return String(u).toLowerCase(); }
+}
+const ROOM_BY_FILE={};
+ROOMS.forEach(g=>g.items.forEach(it=>{ ROOM_BY_FILE[baseName(it.file)] = it.id; }));
+
+function interceptDashboardLinks(iframe){
+  try{
+    const doc=iframe.contentDocument;
+    if(!doc || doc.__roomsHooked) return;
+    doc.__roomsHooked=true;
+    doc.addEventListener('click',function(ev){
+      const a = ev.target.closest && ev.target.closest('a[href],[data-url],[data-href]');
+      if(!a) return;
+      const raw = a.getAttribute('href') || a.getAttribute('data-url') || a.getAttribute('data-href') || '';
+      if(!raw || raw.charAt(0)==='#') return;
+      const id = ROOM_BY_FILE[baseName(raw)];
+      if(id){ ev.preventDefault(); ev.stopPropagation(); openRoom(id); }
+    }, true);
+  }catch(e){ /* кросс-доменный фрейм — пропускаем */ }
+}
+/* Перехват window.open внутри комнаты → открыть нужную комнату хаба
+   (кнопки «OZON»/«ВБ» в калькуляторах ведут на старые F:\ пути). */
+function interceptWindowOpen(iframe){
+  try{
+    var win=iframe.contentWindow; if(!win||win.__roomsOpenHooked) return; win.__roomsOpenHooked=true;
+    var _open=win.open.bind(win);
+    win.open=function(url){
+      try{
+        var u=String(url||'').toLowerCase();
+        var id=ROOM_BY_FILE[baseName(url||'')];
+        if(!id){ if(/ozon/.test(u)) id='ozon'; else if(/wb|wildberries/.test(u)) id='wb'; }
+        if(id){ openRoom(id); return null; }
+      }catch(e){}
+      return _open.apply(null, arguments);
+    };
+  }catch(e){}
+}
+
+/* ---------- LOGIN ---------- */
+function doLogin(){
+  const user=document.getElementById('loginUser').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  if(user!==ROOM_LOGIN || pass!==ROOM_PASSWORD){ document.getElementById('loginErr').textContent='Неверный логин или пароль'; return; }
+  try{ sessionStorage.setItem('pr:auth','1'); }catch(e){}
+  showRolePick();   // роль спрашиваем каждый раз, не запоминаем
+}
+function startApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('rolepick').style.display='none';
+  document.getElementById('app').classList.add('on');
+  let n=''; try{ n=localStorage.getItem('pr:name')||''; }catch(e){}
+  const g=document.getElementById('greeting'); if(g) g.textContent = n ? `Привет, ${n}` : 'Добро пожаловать';
+  goHome();
+}
+
+/* ---------- ЕДИНЫЙ ВЫБОР РОЛИ (для ФОКС и Академии) ---------- */
+const ROLE_OPTS=[['planner','Формирует заказ'],['control','Проверяет'],['packing','Фасует'],['assembly','Собирает'],['manager','Руководитель']];
+const BOSS_NAMES=['вячеслав','евгений','ксения','ладар','лада'];
+let rpRole='';
+(function buildRolePick(){
+  const box=document.getElementById('rpRoles'); if(!box) return;
+  ROLE_OPTS.forEach(function(o){
+    const b=document.createElement('button'); b.type='button'; b.className='rp-role'; b.dataset.role=o[0]; b.textContent=o[1];
+    b.addEventListener('click',function(){ rpRole=o[0]; box.querySelectorAll('.rp-role').forEach(x=>x.classList.toggle('on',x.dataset.role===o[0])); });
+    box.appendChild(b);
+  });
+})();
+function applyRole(name, role){
+  try{
+    localStorage.setItem('pr:name',name); localStorage.setItem('pr:role',role);
+    localStorage.setItem('fox_user',name); localStorage.setItem('fox_role',role);   // → ФОКС
+    if(role==='manager'){
+      localStorage.setItem('mp_user',JSON.stringify({name:name,dept:'ruk',role:'ruk',full:true}));  // → Академия: полный доступ
+    } else {
+      localStorage.removeItem('mp_user');   // Академия покажет свой выбор отдела/должности
+    }
+  }catch(e){}
+}
+function showRolePick(){
+  document.getElementById('rpName').value=''; rpRole='';   // каждый раз заново, без запоминания
+  document.getElementById('rpRoles').querySelectorAll('.rp-role').forEach(x=>x.classList.remove('on'));
+  document.getElementById('rpErr').textContent='';
+  document.getElementById('login').style.display='none';
+  document.getElementById('rolepick').style.display='flex';
+}
+function doRolePick(){
+  const name=document.getElementById('rpName').value.trim();
+  const err=document.getElementById('rpErr');
+  if(!name){ err.textContent='Впиши имя'; return; }
+  if(!rpRole){ err.textContent='Выбери роль'; return; }
+  if(rpRole==='manager'){
+    const fn=name.toLowerCase().split(' ')[0];
+    if(BOSS_NAMES.indexOf(fn)<0 && BOSS_NAMES.indexOf(name.toLowerCase())<0){
+      err.textContent='Роль «Руководитель» доступна не для этого имени'; return;
+    }
+  }
+  applyRole(name, rpRole);
+  document.getElementById('rolepick').style.display='none';
+  startApp();
+  ['fox','academy'].forEach(function(k){ if(FRAMES[k]) FRAMES[k].loadedAt=0; });   // роль сменилась — перегрузить эти комнаты
+  if(current && (current.id==='fox'||current.id==='academy')) openRoom(current.id, true);
+}
+document.getElementById('rpBtn').addEventListener('click',doRolePick);
+document.getElementById('rpName').addEventListener('keydown',function(e){ if(e.key==='Enter') doRolePick(); });
+
+/* ---------- BUILD NAV + CARDS ---------- */
+const sidebar=document.getElementById('sidebar'), catalog=document.getElementById('catalog');
+ROOMS.forEach(g=>{
+  const lab=document.createElement('div'); lab.className='group-label'; lab.textContent=g.icon+'  '+g.group; sidebar.appendChild(lab);
+  g.items.forEach(it=>{
+    const b=document.createElement('button'); b.className='navitem'; b.dataset.id=it.id;
+    b.dataset.search=(it.name+' '+it.sub+' '+g.group).toLowerCase();
+    b.innerHTML=`<span class="swatch" style="background:${g.color}"></span><span class="nm">${it.name}<span class="sub">${it.sub}</span></span>`;
+    b.addEventListener('click',()=>openRoom(it.id)); sidebar.appendChild(b);
+  });
+  const sec=document.createElement('div'); sec.className='cat'; sec.innerHTML=`<h3>${g.icon} ${g.group}</h3>`;
+  const grid=document.createElement('div'); grid.className='cards';
+  g.items.forEach(it=>{
+    const c=document.createElement('button'); c.className='card'; c.style.setProperty('--cc',g.color);
+    c.dataset.search=(it.name+' '+it.sub+' '+g.group).toLowerCase();
+    c.innerHTML=`<span class="ic">${g.icon}</span><div class="ti">${it.name}</div><div class="de">${it.desc}</div><div class="go">войти →</div>`;
+    c.addEventListener('click',()=>openRoom(it.id)); grid.appendChild(c);
+  });
+  sec.appendChild(grid); catalog.appendChild(sec);
+});
+document.getElementById('note').textContent=`Комнат: ${Object.keys(BY_ID).length}. Открываются по одной, по требованию.`;
+
+/* ---------- OPEN / HOME (комнаты живут в памяти, кэш 20 минут) ---------- */
+const frameWrap=document.getElementById('frameWrap'), loading=document.getElementById('loading'),
+ viewbar=document.getElementById('viewbar'), viewTitle=document.getElementById('viewTitle'), viewSub=document.getElementById('viewSub'),
+ openTab=document.getElementById('openTab'), homeLink=document.getElementById('homeLink');
+const room=document.getElementById('room'); if(room) room.style.display='none';
+const _oldView=document.getElementById('view'); if(_oldView) _oldView.remove();   // старый одиночный iframe не нужен
+
+const STALE_MS=20*60*1000;   // комната считается «свежей» 20 минут — не перегружаем
+const FRAMES={};             // key -> {el, loadedAt}
+let current=null;
+
+function ensureFrame(key, file, force){
+  let f=FRAMES[key];
+  if(!f){
+    const el=document.createElement('iframe');
+    el.className='view'; el.title='Комната'; el.style.display='none';
+    frameWrap.appendChild(el);
+    f=FRAMES[key]={el, loadedAt:0};
+  }
+  const stale=(Date.now()-f.loadedAt)>=STALE_MS;
+  if(force || f.loadedAt===0 || stale){
+    loading.classList.add('show');
+    f.el.onload=()=>{
+      if(key!=='pl') autoLoginIntoFrame(f.el);     // у 1С пароль свой — не трогаем
+      interceptDashboardLinks(f.el); interceptWindowOpen(f.el);
+      f.loadedAt=Date.now(); loading.classList.remove('show');
+    };
+    f.el.src=encodeURI(file)+(file.indexOf('?')<0?'?_cb=':'&_cb=')+Date.now();
+  } else {
+    loading.classList.remove('show');
+  }
+  return f;
+}
+function showFrame(key){ Object.keys(FRAMES).forEach(k=>{ FRAMES[k].el.style.display=(k===key)?'block':'none'; }); }
+
+function openRoom(id, force){
+  const it=BY_ID[id]; if(!it)return; current=it;
+  viewbar.classList.add('show'); openTab.style.display='inline-flex';
+  viewTitle.textContent=it.name; viewSub.textContent=it._group.group+' · '+it.file;
+  ensureFrame(id, it.file, force); showFrame(id);
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active',n.dataset.id===id));
+  homeLink.classList.remove('active'); closeSidebar();
+  try{sessionStorage.setItem('pr:last',id)}catch(e){}
+}
+function goHome(force){
+  current=null; viewbar.classList.remove('show'); openTab.style.display='none';
+  ensureFrame('__home__', HOME_FILE, force); showFrame('__home__');
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active')); homeLink.classList.add('active');
+  try{sessionStorage.removeItem('pr:last')}catch(e){}
+}
+function refreshCurrent(){ if(current) openRoom(current.id, true); else goHome(true); }
+
+homeLink.addEventListener('click',()=>goHome());
+document.getElementById('backBtn').addEventListener('click',()=>goHome());
+document.getElementById('brandHome').addEventListener('click',()=>goHome());
+openTab.addEventListener('click',()=>{ if(current) window.open(encodeURI(current.file),'_blank','noopener'); });
+var _rb=document.getElementById('refreshBtn'); if(_rb) _rb.addEventListener('click',refreshCurrent);
+var _role=document.getElementById('roleBtn'); if(_role) _role.addEventListener('click',showRolePick);
+
+/* ---------- SEARCH ---------- */
+document.getElementById('search').addEventListener('input',e=>{
+  const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('.navitem').forEach(n=>n.style.display=!q||n.dataset.search.includes(q)?'':'none');
+  document.querySelectorAll('.group-label').forEach(l=>l.style.display=q?'none':'');
+  if(room.style.display!=='none')document.querySelectorAll('.card').forEach(c=>c.style.display=!q||c.dataset.search.includes(q)?'':'none');
+});
+
+/* ---------- THEME ---------- */
+const SUN='<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>';
+const MOON='<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>';
+const themeIcon=document.getElementById('themeIcon'),themeLabel=document.getElementById('themeLabel');
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);themeIcon.innerHTML=t==='dark'?SUN:MOON;themeLabel.textContent=t==='dark'?'Светлая':'Тёмная';try{localStorage.setItem('pr:theme',t)}catch(e){}}
+document.getElementById('themeBtn').addEventListener('click',()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark'));
+
+/* ---------- MOBILE MENU ---------- */
+const sb=document.getElementById('sidebar'),bd=document.getElementById('backdrop');
+function closeSidebar(){sb.classList.remove('open');bd.classList.remove('show')}
+document.getElementById('menuToggle').addEventListener('click',()=>{sb.classList.toggle('open');bd.classList.toggle('show')});
+bd.addEventListener('click',closeSidebar);
+
+/* ---------- INIT ---------- */
+(function(){
+  /* подставляем локальные настройки (прокси/ключи) в браузер, чтобы Озон/ВБ/ADS заработали */
+  try{ var S=window.LOCAL_SETTINGS; if(S) Object.keys(S).forEach(function(k){
+    var v=S[k]; if(v===''||v==null) return;
+    if(typeof v==='object' && Object.keys(v).length===0) return;
+    var val=(typeof v==='object')?JSON.stringify(v):String(v);
+    try{ localStorage.setItem(k,val); }catch(e){}
+  }); }catch(e){}
+  let t='light';try{t=localStorage.getItem('pr:theme')||'light'}catch(e){}applyTheme(t);
+  let authed=false;try{authed=sessionStorage.getItem('pr:auth')==='1'}catch(e){}
+  if(authed){ showRolePick(); }
+  else { var lu=document.getElementById('loginUser'); if(lu) lu.focus(); }
+})();
+</script>
+</body>
+</html>
