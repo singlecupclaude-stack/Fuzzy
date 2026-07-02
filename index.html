@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>АДС · Реклама на маркетплейсах</title>
+<!-- ============================================================
+     ПУБЛИЧНЫЙ АДС — болванка без ключей и секретов.
+     Все данные читаются из Google-таблицы, куда их выгружает
+     приватный АДС (кнопка «⬆ Google»). Файл можно выкладывать
+     на GitHub и отдавать коллегам не из команды.
+     ============================================================ -->
+<style>
+  :root{
+    --paper:#f8f1e6; --panel:#fffaf2; --ink:#2b1a13; --muted:#8a7a64; --line:rgba(43,26,19,.14);
+    --gold:#d8a95d; --green:#2e6b33; --green-bg:rgba(111,156,138,.16); --red:#a33b2e; --red-bg:rgba(180,120,120,.16);
+    --yellow:#8a6d1a; --yellow-bg:rgba(212,185,136,.22);
+  }
+  *{box-sizing:border-box}
+  html.dc-dark{filter:invert(.92) hue-rotate(180deg);background:#141210}
+  body{margin:0;font-family:Manrope,'Segoe UI',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:13px;line-height:1.45}
+  .app{width:min(1500px,calc(100% - 24px));margin:0 auto;padding:22px 0 40px}
+  .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-family:Georgia,serif;font-weight:600;font-size:26px;margin:0}
+  .sub{color:var(--muted);font-size:12px}
+  .stale{color:var(--red);font-weight:700}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi .v{font-family:Georgia,serif;font-size:24px;margin-top:4px}
+  .kpi .l{color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+  .bar input,.bar select{height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:0 8px;font:inherit;font-size:12px}
+  .bar input[type=text]{min-width:220px;flex:1}
+  .legend{color:var(--muted);font-size:11px;margin:4px 0 10px}
+  .tl{display:inline-block;padding:1px 6px;border-radius:6px;font-weight:800;font-size:10.5px;white-space:nowrap}
+  .tl-green{background:var(--green-bg);color:var(--green)} .tl-red{background:var(--red-bg);color:var(--red)} .tl-yellow{background:var(--yellow-bg);color:var(--yellow)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .tbl-wrap{max-height:70vh;overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  th{position:sticky;top:0;z-index:2;background:#efe6d8;color:var(--muted);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:7px 8px;text-align:right;white-space:nowrap;cursor:pointer}
+  td{padding:6px 8px;border-bottom:1px solid rgba(43,26,19,.06);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px}
+  th:first-child,td:first-child{text-align:left;white-space:normal}
+  tr.camp{cursor:pointer} tr.camp:hover td{background:rgba(216,169,93,.1)}
+  .cname{font-weight:700;font-size:12.5px} .cmeta{color:var(--muted);font-size:10px}
+  .pill{display:inline-block;padding:1px 7px;border-radius:6px;font-size:10px;font-weight:800}
+  .p-wb{background:rgba(203,72,120,.14);color:#98305a} .p-ozon{background:rgba(0,91,255,.12);color:#1b4bbb} .p-ym{background:rgba(255,204,0,.25);color:#7a6000}
+  .detail td{background:rgba(43,26,19,.03)}
+  .dt{width:100%;border-collapse:collapse;margin:4px 0}
+  .dt th{position:static;font-size:8.5px;padding:4px 6px;background:#efe6d8}
+  .dt td{font-size:11px;padding:4px 6px}
+  .act{font-size:10.5px;font-weight:700;white-space:normal;max-width:180px;display:inline-block}
+  .t-bad{color:var(--red)} .t-warn{color:var(--yellow)} .t-good{color:var(--green)}
+  .note{color:var(--muted);font-size:11px;margin-top:10px}
+  .err{background:var(--red-bg);color:var(--red);padding:14px;border-radius:10px;margin:14px 0;font-weight:600;display:none}
+  #themeT{position:fixed;right:14px;bottom:14px;z-index:999;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fffaf2;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.25)}
+  @media (max-width:800px){ th,td{padding:5px 5px;font-size:11px} .act{max-width:120px} }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>☕ АДС · Реклама</h1>
+    <span class="sub" id="updated">загружаю…</span>
+    <span class="sub" id="period"></span>
+    <button onclick="loadAll()" style="height:26px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font:inherit;font-size:11px">↻ обновить</button>
+  </div>
+  <div class="err" id="err"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="bar">
+    <input id="fQ" type="text" placeholder="поиск: кампания, товар, SKU…">
+    <select id="fPlat"><option value="">все площадки</option><option value="wb">WB</option><option value="ozon">Ozon</option><option value="ym">ЯМ</option></select>
+    <select id="fTone"><option value="">все сигналы</option><option value="bad">🔴 красные</option><option value="warn">🟡 жёлтые</option><option value="good">🟢 зелёные</option></select>
+    <label style="font-size:11px;color:var(--muted)"><input id="fSpend" type="checkbox" checked> только с расходом</label>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div class="card"><div class="tbl-wrap"><table>
+    <thead><tr id="hdr">
+      <th data-k="name">Кампания</th><th data-k="plat">Площадка</th><th data-k="spend">Расход ▼</th>
+      <th data-k="drr">ДРР</th><th data-k="ctr">CTR</th><th data-k="cart">Корзина</th>
+      <th data-k="margin">Маржа</th><th data-k="pc">₽/капс</th><th>Действие</th>
+    </tr></thead>
+    <tbody id="rows"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Загружаю данные из Google-таблицы…</td></tr></tbody>
+  </table></div></div>
+  <div class="note">Данные выгружает приватный Дашборд-центр. ₽/капс — прибыль / реклама на 1 капсулу.
+  Клик по кампании — товары и юнит-экономика. Если данные устарели — открой приватный АДС и нажми «⬆ Google».</div>
+</div>
+<button id="themeT" title="тёмная/светлая">🌙</button>
+<script>
+/* ── НАСТРОЙКА: ID Google-таблицы (доступ «все, у кого есть ссылка — читатель») ── */
+var SHEET_ID = '1XyqlnovR2QmhrCvXXi4vMOw6IOm-o9CbKIuB__B_kaI';
+
+var META = {}, CAMPS = [], GOODS = {}, SORT = { k: 'spend', d: -1 };
+var TL = { profitMin: 5, adsMax: 2, gLow: 4, gHigh: 6, rLow: 3, rHigh: 8 };
+
+function gviz(sheet) {
+  return 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheet) + '&_=' + Date.now();
+}
+function parseCsv(s) {
+  var rows = [], row = [], cur = '', q = false;
+  for (var i = 0; i < s.length; i++) {
+    var ch = s[i];
+    if (q) { if (ch === '"') { if (s[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && s[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.length > 1 || row[0] !== '') rows.push(row); row = []; }
+    else cur += ch;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+function toObjs(rows) {
+  if (!rows.length) return [];
+  var h = rows[0].map(function (x) { return String(x || '').trim(); });
+  return rows.slice(1).map(function (r) { var o = {}; h.forEach(function (k, i) { o[k] = r[i] != null ? r[i] : ''; }); return o; });
+}
+function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n; }
+function fmtM(n) { return (Math.round(n) || 0).toLocaleString('ru-RU'); }
+function pct(n, d) { return n == null ? '—' : n.toLocaleString('ru-RU', { maximumFractionDigits: d == null ? 1 : d }) + '%'; }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function drrLight(d, spend, rev) {
+  if (d == null || !(spend > 0) || !(rev > 0)) return '';
+  if (d > TL.rHigh || d < TL.rLow) return 'red';
+  if (d >= TL.gLow && d <= TL.gHigh) return 'green';
+  return 'yellow';
+}
+function mLight(m) { return m == null ? '' : (m >= 15 ? 'green' : (m >= 0 ? 'yellow' : 'red')); }
+function pcLight(v) { return v == null ? '' : (v >= TL.profitMin ? 'green' : (v >= TL.profitMin * 0.9 ? 'yellow' : 'red')); }
+function acLight(v) { return v == null ? '' : (v <= TL.adsMax ? 'green' : (v <= TL.adsMax * 1.1 ? 'yellow' : 'red')); }
+function tlSpan(v, light, suf) { if (v == null) return '—'; var t = v.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + (suf || ''); return light ? '<span class="tl tl-' + light + '">' + t + '</span>' : t; }
+
+async function fetchSheet(name, raw) {
+  var r = await fetch(gviz(name), { cache: 'no-store' });
+  if (!r.ok) throw new Error(name + ': HTTP ' + r.status);
+  var t = await r.text();
+  if (t.charAt(0) === '<') throw new Error(name + ': таблица не открыта по ссылке (Настройки доступа → «Все, у кого есть ссылка — читатель»)');
+  var rows = parseCsv(t);
+  return raw ? rows : toObjs(rows);
+}
+
+async function loadAll() {
+  var err = document.getElementById('err'); err.style.display = 'none';
+  try {
+    var res = await Promise.all([fetchSheet('кампании'), fetchSheet('товары'), fetchSheet('мета', true)]);
+    CAMPS = res[0].map(function (o) {
+      return { plat: o['площадка'], cab: o['кабинет'], id: o['id'], name: o['название'], type: o['тип'], status: o['статус'],
+        spend: num(o['расход']) || 0, revenue: num(o['выручка']) || 0, drr: num(o['дрр_%']), ctr: num(o['ctr_%']), cart: num(o['корзина_%']),
+        margin: num(o['маржа_%']), pc: num(o['приб_капс']), ac: num(o['рекл_капс']), tone: o['сигнал'] || '', action: o['действие'] || '' };
+    }).filter(function (c) { return c.name; });
+    GOODS = {};
+    res[1].forEach(function (o) {
+      var k = o['площадка'] + ':' + o['кампания_id'];
+      (GOODS[k] = GOODS[k] || []).push(o);
+    });
+    META = {};
+    res[2].forEach(function (r) { if (r && r[0] != null) META[String(r[0]).trim()] = r[1]; });
+    var readTl = function (k, cur) { var v = num(META[k]); return v == null ? cur : v; };
+    TL.profitMin = readTl('лимит_приб_капс', TL.profitMin); TL.adsMax = readTl('лимит_рекл_капс', TL.adsMax);
+    TL.gLow = readTl('дрр_зел_от', TL.gLow); TL.gHigh = readTl('дрр_зел_до', TL.gHigh);
+    TL.rLow = readTl('дрр_красн_низ', TL.rLow); TL.rHigh = readTl('дрр_красн_верх', TL.rHigh);
+    renderMeta(); render();
+  } catch (e) {
+    err.textContent = 'Не удалось загрузить данные: ' + e.message;
+    err.style.display = 'block';
+    document.getElementById('updated').textContent = 'ошибка загрузки';
+  }
+}
+
+function renderMeta() {
+  var up = META['обновлено'] ? new Date(META['обновлено']) : null;
+  var el = document.getElementById('updated');
+  if (up && !isNaN(up)) {
+    var h = (Date.now() - up.getTime()) / 3600000;
+    var txt = 'обновлено ' + up.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    el.innerHTML = h > 26 ? txt + ' · <span class="stale">данные устарели</span>' : txt;
+  } else el.textContent = 'дата обновления неизвестна';
+  document.getElementById('period').textContent = META['период_дней'] ? '· период ' + META['период_дней'] + ' дн' : '';
+  document.getElementById('legend').innerHTML = 'Светофоры — ДРР: <span class="tl tl-green">' + TL.gLow + '–' + TL.gHigh + '%</span> норма, <span class="tl tl-red">&lt;' + TL.rLow + ' · &gt;' + TL.rHigh + '%</span> плохо · ₽/капсула: прибыль ≥ <span class="tl tl-green">' + TL.profitMin + ' ₽</span>, реклама ≤ <span class="tl tl-green">' + TL.adsMax + ' ₽</span>';
+}
+
+var EXPANDED = {};
+function filtered() {
+  var q = document.getElementById('fQ').value.trim().toLowerCase();
+  var p = document.getElementById('fPlat').value;
+  var t = document.getElementById('fTone').value;
+  var sp = document.getElementById('fSpend').checked;
+  return CAMPS.filter(function (c) {
+    if (p && c.plat !== p) return false;
+    if (t && c.tone !== t) return false;
+    if (sp && !(c.spend > 0)) return false;
+    if (q) {
+      var hay = (c.name + ' ' + c.id + ' ' + (GOODS[c.plat + ':' + c.id] || []).map(function (g) { return g['товар'] + ' ' + g['sku']; }).join(' ')).toLowerCase();
+      if (hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  }).sort(function (a, b) {
+    var k = SORT.k, d = SORT.d;
+    var av = k === 'name' ? a.name : (k === 'plat' ? a.plat : a[k]);
+    var bv = k === 'name' ? b.name : (k === 'plat' ? b.plat : b[k]);
+    if (typeof av === 'string' || typeof bv === 'string') return d * String(av || '').localeCompare(String(bv || ''), 'ru');
+    return d * ((av == null ? -1e15 : av) - (bv == null ? -1e15 : bv));
+  });
+}
+
+function render() {
+  var data = filtered();
+  var spend = 0, rev = 0, withSpend = 0;
+  CAMPS.forEach(function (c) { spend += c.spend; rev += c.revenue; if (c.spend > 0) withSpend++; });
+  document.getElementById('kpis').innerHTML =
+    '<div class="kpi"><div class="l">Расход на рекламу</div><div class="v">' + fmtM(spend) + ' ₽</div></div>' +
+    '<div class="kpi"><div class="l">Рекламная выручка</div><div class="v">' + fmtM(rev) + ' ₽</div></div>' +
+    '<div class="kpi"><div class="l">Средний ДРР</div><div class="v">' + (rev > 0 ? pct(spend / rev * 100) : '—') + '</div></div>' +
+    '<div class="kpi"><div class="l">Кампаний / с расходом</div><div class="v">' + CAMPS.length + ' / ' + withSpend + '</div></div>';
+
+  var pillCls = { wb: 'p-wb', ozon: 'p-ozon', ym: 'p-ym' };
+  var platNm = { wb: 'WB', ozon: 'Ozon', ym: 'ЯМ' };
+  var toneCls = { bad: 't-bad', warn: 't-warn', good: 't-good' };
+  document.getElementById('rows').innerHTML = data.length ? data.map(function (c) {
+    var key = c.plat + ':' + c.id;
+    var pcCell = (c.pc == null && c.ac == null) ? '—'
+      : tlSpan(c.pc, pcLight(c.pc)) + ' <span style="color:var(--muted)">/</span> ' + tlSpan(c.ac, acLight(c.ac));
+    var html = '<tr class="camp" data-k="' + esc(key) + '">' +
+      '<td><span class="cname">' + esc(c.name) + '</span><div class="cmeta">' + esc((c.type || '') + (c.status ? ' · ' + c.status : '') + (c.cab ? ' · ' + c.cab : '')) + '</div></td>' +
+      '<td><span class="pill ' + (pillCls[c.plat] || '') + '">' + (platNm[c.plat] || esc(c.plat)) + '</span></td>' +
+      '<td>' + (c.spend > 0 ? fmtM(c.spend) + ' ₽' : '—') + '</td>' +
+      '<td>' + tlSpan(c.drr, drrLight(c.drr, c.spend, c.revenue), '%') + '</td>' +
+      '<td>' + pct(c.ctr, 2) + '</td>' +
+      '<td>' + pct(c.cart) + '</td>' +
+      '<td>' + tlSpan(c.margin, mLight(c.margin), '%') + '</td>' +
+      '<td>' + pcCell + '</td>' +
+      '<td style="text-align:left"><span class="act ' + (toneCls[c.tone] || '') + '">' + esc(c.action || '') + '</span></td></tr>';
+    if (EXPANDED[key]) html += detailRow(key);
+    return html;
+  }).join('') : '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Ничего не найдено</td></tr>';
+}
+
+function detailRow(key) {
+  var g = GOODS[key] || [];
+  if (!g.length) return '<tr class="detail"><td colspan="9" style="text-align:left;color:var(--muted)">Товары кампании не выгружены (раскрой кампанию в приватном АДС и повтори «⬆ Google»).</td></tr>';
+  var h = '<tr class="detail"><td colspan="9" style="text-align:left"><div style="overflow:auto"><table class="dt"><thead><tr>' +
+    '<th style="text-align:left">Товар</th><th>Заказы</th><th>Выручка</th><th>Цена/ед</th><th>Себест/ед</th><th>Комис/ед</th><th>Логист/ед</th><th>Реклама/ед</th><th>Прибыль/ед</th><th>Маржа</th><th>Приб ₽/капс</th><th>Рекл ₽/капс</th><th>Остаток</th>' +
+    '</tr></thead><tbody>' +
+    g.map(function (r) {
+      var m = num(r['маржа_%']), pc = num(r['приб_капс']), ac = num(r['рекл_капс']);
+      return '<tr><td style="text-align:left">' + esc(r['товар'] || r['sku']) + '<div class="cmeta">' + esc(r['sku'] || '') + '</div></td>' +
+        '<td>' + esc(r['заказы'] || '—') + '</td><td>' + (num(r['выручка']) != null ? fmtM(num(r['выручка'])) + ' ₽' : '—') + '</td>' +
+        ['цена_ед', 'себест_ед', 'комис_ед', 'логист_ед', 'реклама_ед', 'прибыль_ед'].map(function (k) { var v = num(r[k]); return '<td>' + (v != null && v !== 0 ? fmtM(v) + ' ₽' : '—') + '</td>'; }).join('') +
+        '<td>' + tlSpan(m, mLight(m), '%') + '</td>' +
+        '<td>' + tlSpan(pc, pcLight(pc)) + '</td>' +
+        '<td>' + tlSpan(ac, acLight(ac)) + '</td>' +
+        '<td>' + esc(r['остаток'] || '—') + '</td></tr>';
+    }).join('') + '</tbody></table></div></td></tr>';
+  return h;
+}
+
+document.getElementById('rows').addEventListener('click', function (e) {
+  var tr = e.target.closest('tr.camp'); if (!tr) return;
+  var k = tr.getAttribute('data-k');
+  EXPANDED[k] = !EXPANDED[k];
+  render();
+});
+document.getElementById('hdr').addEventListener('click', function (e) {
+  var th = e.target.closest('th[data-k]'); if (!th) return;
+  var k = th.getAttribute('data-k');
+  if (SORT.k === k) SORT.d = -SORT.d; else { SORT.k = k; SORT.d = -1; }
+  document.querySelectorAll('#hdr th').forEach(function (t) { t.textContent = t.textContent.replace(/ [▼▲]/, ''); });
+  th.textContent += SORT.d < 0 ? ' ▼' : ' ▲';
+  render();
+});
+['fQ', 'fPlat', 'fTone', 'fSpend'].forEach(function (id) {
+  document.getElementById(id).addEventListener(id === 'fQ' ? 'input' : 'change', render);
+});
+
+/* тема */
+function applyT(t) { document.documentElement.classList.toggle('dc-dark', t === 'dark'); document.getElementById('themeT').textContent = t === 'dark' ? '☀️' : '🌙'; }
+document.getElementById('themeT').addEventListener('click', function () {
+  var t = document.documentElement.classList.contains('dc-dark') ? 'light' : 'dark';
+  try { localStorage.setItem('ads_pub_theme', t); } catch (e) {}
+  applyT(t);
+});
+try { applyT(localStorage.getItem('ads_pub_theme') || 'light'); } catch (e) {}
+
+loadAll();
+setInterval(loadAll, 15 * 60 * 1000);   // автообновление каждые 15 минут
+</script>
+</body>
+</html>
