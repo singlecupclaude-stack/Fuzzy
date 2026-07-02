@@ -1050,8 +1050,11 @@ async function fetchSheet(name,raw){
   return raw?rows:toObjs(rows);
 }
 
+var _lastFetch=null;
 async function loadAll(){
   var err=$('pubErr'); err.style.display='none';
+  var btn=$('btnRefresh'); if(btn){btn.disabled=true;btn.textContent='…';}
+  var cm=$('campMeta'); if(cm)cm.textContent='обновляю из Google-таблицы…';
   try{
     var res=await Promise.all([fetchSheet('кампании'),fetchSheet('товары'),fetchSheet('мета',true)]);
     CAMPS=res[0].map(function(o){
@@ -1071,6 +1074,7 @@ async function loadAll(){
       err.innerHTML='Таблица пока пустая. Открой приватный АДС в Дашборд-центре и нажми <b>«⬆ Google»</b> — цифры появятся здесь через минуту.';
       err.style.display='block';
     }
+    _lastFetch=new Date();
     renderMeta(); render();
   }catch(e){
     var msg = e.message==='ACCESS'
@@ -1079,6 +1083,8 @@ async function loadAll(){
     err.innerHTML=msg; err.style.display='block';
     $('campMeta').textContent='ошибка загрузки';
     $('campRows').innerHTML='<div class="camp-empty">Нет данных</div>';
+  }finally{
+    var b2=$('btnRefresh'); if(b2){b2.disabled=false;b2.textContent='↻';}
   }
 }
 
@@ -1091,6 +1097,7 @@ function renderMeta(){
     if(h>26)meta+=' · ⚠ данные устарели';
   } else meta='дата обновления неизвестна';
   if(META['период_дней'])meta+=' · период '+META['период_дней']+' дн';
+  if(_lastFetch)meta+=' · проверено '+_lastFetch.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   $('campMeta').textContent=meta;
   $('brandMeta').textContent='публичная витрина · '+meta;
   $('tlLegend').innerHTML='<b>Светофор ДРР:</b>'+
