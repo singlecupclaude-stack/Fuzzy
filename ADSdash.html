@@ -3,285 +3,1220 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>АДС · Реклама на маркетплейсах</title>
+<title>SOWY ADS · публичная витрина</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Prata&display=swap" rel="stylesheet">
 <!-- ============================================================
-     ПУБЛИЧНЫЙ АДС — болванка без ключей и секретов.
-     Все данные читаются из Google-таблицы, куда их выгружает
-     приватный АДС (кнопка «⬆ Google»). Файл можно выкладывать
-     на GitHub и отдавать коллегам не из команды.
+     ПУБЛИЧНЫЙ SOWY ADS — без ключей и секретов.
+     Данные читаются из Google-таблицы (выгружает приватный АДС).
+     Стили и структура — как в приватном дашборде.
      ============================================================ -->
 <style>
-  :root{
-    --paper:#f8f1e6; --panel:#fffaf2; --ink:#2b1a13; --muted:#8a7a64; --line:rgba(43,26,19,.14);
-    --gold:#d8a95d; --green:#2e6b33; --green-bg:rgba(111,156,138,.16); --red:#a33b2e; --red-bg:rgba(180,120,120,.16);
-    --yellow:#8a6d1a; --yellow-bg:rgba(212,185,136,.22);
-  }
-  *{box-sizing:border-box}
+    :root {
+      --ink: #281a12;
+      --paper: #f5eadf;
+      --paper-2: #fff8ef;
+      --line: rgba(43, 26, 19, .13);
+      --muted: #746856;
+      --champagne: #d8a95d;
+      --gold: #c9832b;
+      --copper: #a85d36;
+      --rose: #c86f61;
+      --espresso: #2b1a13;
+      --graphite: #2f2922;
+      --shadow: 0 26px 78px rgba(43, 26, 19, .22);
+      --soft-shadow: 0 18px 60px rgba(69, 46, 30, .10);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--paper); scroll-behavior: smooth; }
+    [id^="kb-"] { scroll-margin-top: 18px; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: Manrope, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+      background:
+        linear-gradient(90deg, rgba(245,234,223,.99), rgba(245,234,223,.91) 45%, rgba(245,234,223,.34)),
+        var(--paper);
+      overflow-x: hidden;
+    }
+
+    .bg-map {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: min(980px, 70vw);
+      min-height: 720px;
+      z-index: 0;
+      pointer-events: none;
+      opacity: .62;
+      filter: saturate(.92) contrast(.95);
+      background:
+        linear-gradient(90deg, transparent 0 calc(50% - 1px), rgba(43,26,19,.25) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+        linear-gradient(0deg, transparent 0 calc(50% - 1px), rgba(43,26,19,.22) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+        radial-gradient(circle at 18% 28%, rgba(216,169,93,.68) 0 4px, transparent 5px),
+        radial-gradient(circle at 44% 52%, rgba(201,131,43,.58) 0 5px, transparent 6px),
+        radial-gradient(circle at 72% 34%, rgba(168,93,54,.52) 0 4px, transparent 5px),
+        radial-gradient(circle at 66% 72%, rgba(200,111,97,.48) 0 5px, transparent 6px);
+      background-size: 96px 96px, 96px 96px, auto, auto, auto, auto;
+      mask-image: radial-gradient(ellipse at 64% 42%, #000 0 58%, transparent 82%);
+    }
+
+    .bg-veil {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: linear-gradient(90deg, rgba(245,234,223,.99), rgba(245,234,223,.89) 52%, rgba(245,234,223,.16));
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      width: min(1800px, calc(100% - 20px));
+      margin: 0 auto;
+      padding: 30px 0 44px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 50px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(43,26,19,.18);
+      background: linear-gradient(135deg, var(--espresso), #5a3a24);
+      box-shadow: 0 12px 30px rgba(43, 26, 19, .25);
+      display: grid;
+      place-items: center;
+      color: var(--paper-2);
+      border-radius: 8px;
+      font-weight: 900;
+      font-size: 12px;
+    }
+
+    .brand-name {
+      font-family: Prata, Georgia, serif;
+      font-size: 24px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .brand-meta { color: var(--muted); font-size: 12px; margin-top: 5px; white-space: nowrap; }
+
+    .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+
+    .text-button, .icon-button {
+      height: 36px;
+      border: 1px solid var(--line);
+      background: rgba(255, 248, 239, .74);
+      color: var(--ink);
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .text-button { padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+    .icon-button { width: 36px; display: grid; place-items: center; }
+
+    .text-button:hover, .icon-button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(201,131,43,.44);
+      background: rgba(255, 248, 239, .96);
+    }
+
+    .text-button.active { border-color: rgba(201,131,43,.5); background: rgba(216,169,93,.28); color: #2f1c10; }
+    .icon-button.spinning { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 560px);
+      align-items: end;
+      gap: 28px;
+      padding: 18px 0 18px;
+    }
+
+    h1 {
+      max-width: 620px;
+      margin: 0;
+      font-family: Prata, Georgia, serif;
+      font-size: clamp(28px, 3vw, 46px);
+      line-height: 1.02;
+      font-weight: 400;
+      color: var(--ink);
+    }
+
+    .hero-copy {
+      max-width: 560px;
+      margin: 12px 0 0;
+      color: #5f513f;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      border: 1px solid rgba(255, 248, 239, .42);
+      background: rgba(43, 26, 19, .88);
+      color: var(--paper-2);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+      justify-self: end;
+    }
+
+    .summary-item { min-height: 92px; padding: 18px; border-right: 1px solid rgba(255,255,255,.13); }
+    .summary-item:last-child { border-right: 0; }
+    .summary-number { display: block; font-family: Prata, Georgia, serif; font-size: 30px; line-height: 1.05; color: #ffe2a6; white-space: nowrap; }
+    .summary-label {
+      display: block;
+      margin-top: 9px;
+      color: rgba(255,248,239,.68);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .summary-sub { display: block; margin-top: 6px; color: var(--champagne); font-size: 11px; font-weight: 700; line-height: 1.35; }
+
+    /* ── Баннер статуса/ошибки ───────────────────────────────── */
+    .banner {
+      display: none;
+      margin: 14px 0 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid;
+    }
+    .banner.show { display: block; }
+    .banner.info  { background: rgba(216,169,93,.16); border-color: rgba(201,131,43,.34); color: #6c4a18; }
+    .banner.error { background: rgba(200,111,97,.14); border-color: rgba(168,93,54,.4);  color: #8d3b30; }
+    .banner b { font-weight: 900; }
+
+    .workspace { display: grid; grid-template-columns: 238px minmax(0, 1fr); gap: 18px; align-items: start; }
+
+    .panel, .glass {
+      border: 1px solid var(--line);
+      background: rgba(255, 248, 239, .82);
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(18px);
+      border-radius: 8px;
+    }
+
+    .panel { position: sticky; top: 24px; padding: 18px; max-height: calc(100vh - 48px); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(43,26,19,.22) transparent; }
+    .panel::-webkit-scrollbar { width: 6px; }
+    .panel::-webkit-scrollbar-track { background: transparent; }
+    .panel::-webkit-scrollbar-thumb { background: rgba(43,26,19,.18); border-radius: 6px; }
+    .panel::-webkit-scrollbar-thumb:hover { background: rgba(43,26,19,.3); }
+
+    .filter-title {
+      margin: 18px 0 9px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
+
+    .search {
+      width: 100%;
+      height: 44px;
+      border: 1px solid rgba(43,26,19,.14);
+      background: rgba(255,255,255,.58);
+      color: var(--ink);
+      border-radius: 8px;
+      outline: none;
+      padding: 0 13px;
+      font-size: 13px;
+    }
+
+    .segmented { display: grid; gap: 6px; }
+
+    .segment {
+      width: 100%;
+      height: 38px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #514131;
+      text-align: left;
+      border-radius: 8px;
+      padding: 0 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .segment small {
+      min-width: 24px;
+      height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: rgba(43,26,19,.07);
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .segment.active {
+      border-color: rgba(201,131,43,.32);
+      background: rgba(216,169,93,.20);
+      color: #2f1c10;
+    }
+
+    .sheet-link {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 38px;
+      margin-top: 18px;
+      border-radius: 8px;
+      border: 1px solid rgba(168,93,54,.30);
+      color: #8d4c35;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 900;
+      background: rgba(168,93,54,.09);
+      cursor: pointer;
+    }
+
+    /* ── Конфиг-панель ключей ────────────────────────────────── */
+    .cfg-drawer {
+      display: none;
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px dashed rgba(168,93,54,.4);
+      border-radius: 8px;
+      background: rgba(255,248,239,.7);
+    }
+    .cfg-drawer.show { display: block; }
+    .cfg-drawer label { display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 10px 0 5px; }
+    .cfg-drawer input {
+      width: 100%; height: 36px; padding: 0 10px; font-size: 12px;
+      border: 1px solid rgba(43,26,19,.16); border-radius: 7px; background: #fff;
+    }
+    .cfg-hint { font-size: 11px; color: #8a7a64; line-height: 1.45; margin-top: 6px; }
+    .cfg-save {
+      width: 100%; height: 38px; margin-top: 12px; border: none; border-radius: 8px;
+      background: var(--espresso); color: var(--paper-2); font-weight: 900; font-size: 12px; cursor: pointer;
+    }
+
+    .main { display: grid; gap: 18px; min-width: 0; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      min-height: 48px;
+    }
+
+    .section-title { margin: 0; font-family: Prata, Georgia, serif; font-size: 28px; font-weight: 400; }
+    .status { color: var(--muted); font-size: 12px; text-align: right; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+    .metric-card {
+      min-height: 130px;
+      border: 1px solid rgba(43,26,19,.10);
+      background: rgba(255,248,239,.94);
+      border-radius: 8px;
+      padding: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--champagne);
+      opacity: .95;
+    }
+
+    .metric-card[data-tone="copper"]::before { background: var(--gold); }
+    .metric-card[data-tone="blue"]::before { background: var(--copper); }
+    .metric-card[data-tone="coral"]::before { background: var(--rose); }
+
+    .metric-label { color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .10em; }
+    .metric-value { margin-top: 15px; font-family: Prata, Georgia, serif; font-size: 32px; line-height: 1; }
+    .metric-note { margin-top: 10px; color: #675844; font-size: 12px; line-height: 1.45; }
+
+    .board { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(330px, .75fr); gap: 16px; }
+
+    .deep-card {
+      border: 1px solid var(--line);
+      background: rgba(255, 248, 239, .86);
+      box-shadow: 0 18px 50px rgba(69, 46, 30, .10);
+      backdrop-filter: blur(16px);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .deep-head {
+      min-height: 54px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .deep-title { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+    .deep-meta { color: var(--muted); font-size: 12px; }
+
+    .chart { height: 230px; padding: 18px; display: flex; gap: 9px; align-items: end; }
+
+    .bar {
+      flex: 1;
+      min-width: 22px;
+      border-radius: 8px 8px 0 0;
+      background: linear-gradient(180deg, #f1c979, var(--gold));
+      position: relative;
+      transition: height .4s ease;
+    }
+
+    .bar:nth-child(2n) { background: linear-gradient(180deg, var(--copper), #7b3f25); }
+    .bar:nth-child(3n) { background: linear-gradient(180deg, #3e2a1d, var(--espresso)); }
+
+    .bar span {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .bar small {
+      position: absolute;
+      left: 50%; top: calc(100% + 6px);
+      transform: translateX(-50%);
+      color: var(--muted); font-size: 9px; font-weight: 800;
+      white-space: nowrap;
+    }
+    .chart.dense { gap: 4px; }
+    .bar.dense { min-width: 5px; }
+    .bar.dense span { font-size: 7.5px; }
+    .bar.dense small { font-size: 7.5px; top: calc(100% + 4px); }
+
+    .table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; min-width: 820px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid rgba(43,26,19,.08); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; position: sticky; top: 0; background: rgba(255,248,239,.98); z-index: 1; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .table tbody tr:hover { background: rgba(216,169,93,.08); }
+    .table td:first-child { overflow: hidden; }
+    .table td strong { font-size: 12.5px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .table td .status { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .table-wrap { max-height: 580px; overflow: auto; border-radius: 0 0 8px 8px; }
+    .pill.act { width: 100%; max-width: 100%; box-sizing: border-box; white-space: normal; line-height: 1.2; min-height: 28px; }
+
+    /* ── Список кампаний на CSS-grid (надёжнее table) ───────── */
+    .camp-wrap { max-height: 600px; overflow-y: auto; overflow-x: auto; }
+    .camp-head, .camp-row {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) 64px 104px 58px 58px 72px 62px 96px 178px;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 16px;
+    }
+    .camp-head {
+      position: sticky; top: 0; z-index: 2;
+      background: rgba(255,248,239,.98);
+      border-bottom: 1px solid var(--line);
+      color: var(--muted); font-size: 10px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .camp-head .r, .camp-row .r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .camp-row { border-bottom: 1px solid rgba(43,26,19,.07); font-size: 12.5px; }
+    .camp-row:hover { background: rgba(216,169,93,.08); }
+    .camp-name { min-width: 0; display: flex; align-items: center; gap: 7px; }
+    .camp-name .cn { min-width: 0; flex: 1; }
+    .camp-name strong { display: block; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .camp-name .cn > span { display: block; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+    .rchev { display: inline-block; width: 12px; color: var(--muted); font-size: 10px; flex-shrink: 0; }
+    .camp-row { cursor: pointer; }
+    .camp-row.exp { background: rgba(216,169,93,.10); }
+
+    /* детализация кампании (товары + запросы) */
+    .camp-detail { padding: 10px 10px 14px 20px; background: rgba(43,26,19,.035); border-bottom: 1px solid rgba(43,26,19,.08); }
+    .cd-loading { color: var(--muted); font-size: 12px; padding: 8px 0; }
+    .cd-note { color: var(--muted); font-size: 11.5px; padding: 4px 0; line-height: 1.45; }
+    .cd-h { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 10px 0 5px; }
+    .cd-h:first-child { margin-top: 0; }
+    .cd-scroll { overflow-x: auto; border: 1px solid rgba(43,26,19,.10); border-radius: 10px; background: #fbf7f0; }
+    .cd-tbl { width: 100%; border-collapse: collapse; min-width: 640px; }
+    .cd-tbl th, .cd-tbl td { padding: 4px 5px; border-bottom: 1px solid rgba(43,26,19,.06); font-size: 10.5px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
+    .cd-tbl thead th { position: sticky; top: 0; z-index: 2; background: #efe6d8; color: var(--muted); font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+    .cd-tbl tbody tr:hover td { background: rgba(216,169,93,.10); }
+    .cd-tbl th:first-child, .cd-tbl td:first-child { text-align: left; white-space: normal; position: sticky; left: 0; z-index: 1; background: #fbf7f0; min-width: 138px; max-width: 168px; box-shadow: 1px 0 0 rgba(43,26,19,.08); }
+    .cd-tbl thead th:first-child { z-index: 3; background: #efe6d8; }
+    .cd-tbl tbody tr:hover td:first-child { background: #f6efe2; }
+    .cd-tbl .tl { font-size: 10.5px; padding: 1px 5px; }
+    .cd-name { font-weight: 600; font-size: 11px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; border-bottom: 1px dashed var(--gold); cursor: pointer; }
+    .cd-meta { font-size: 8.5px; color: var(--muted); margin-top: 2px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+    .cd-tot { font-size: 8.5px; color: var(--muted); margin-top: 1px; font-variant-numeric: tabular-nums; }
+    .camp-empty { padding: 26px; text-align: center; color: var(--muted); font-size: 13px; }
+    .toggle-row { display: flex; gap: 5px; justify-content: space-between; }
+    .toggle-row .segment { flex: 0 1 auto; width: auto; justify-content: center; height: 32px; font-size: 11px; padding: 0 9px; letter-spacing: -.1px; white-space: nowrap; }
+
+    /* сортируемые заголовки */
+    .camp-head > div[data-sort] { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px; }
+    .camp-head > div[data-sort].r { justify-content: flex-end; }
+    .camp-head .arrow { font-size: 9px; opacity: .4; }
+    .camp-head > div[data-sort].sorted { color: var(--gold); }
+    .camp-head > div[data-sort].sorted .arrow { opacity: 1; }
+
+    /* строка фильтров под шапкой */
+    .camp-filters {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) 64px 104px 58px 58px 72px 62px 96px 178px;
+      gap: 10px; padding: 7px 16px;
+      position: sticky; top: 35px; z-index: 2;
+      background: rgba(248,238,226,.98);
+      border-bottom: 1px solid var(--line);
+    }
+    .camp-filters input, .camp-filters select {
+      width: 100%; height: 28px; padding: 0 6px; font-size: 11px;
+      border: 1px solid rgba(43,26,19,.16); border-radius: 6px; background: #fff; color: var(--ink);
+      min-width: 0;
+    }
+    .camp-filters .r input { text-align: right; }
+
+    /* подытог-заголовок группы */
+    .camp-group {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) 64px 104px 58px 58px 72px 62px 96px 178px;
+      gap: 10px; padding: 8px 16px; align-items: center;
+      background: rgba(43,26,19,.055);
+      border-bottom: 1px solid rgba(43,26,19,.1);
+      border-top: 1px solid rgba(43,26,19,.1);
+    }
+    .camp-group { cursor: pointer; }
+    .camp-group:hover { background: rgba(43,26,19,.085); }
+    .camp-group .gname { font-weight: 900; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+    .gchev { display: inline-block; width: 12px; color: var(--muted); font-size: 9px; flex-shrink: 0; }
+    .camp-group .gname small { font-weight: 700; color: var(--muted); font-size: 11px; }
+    .camp-group .r { text-align: right; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 12px; white-space: nowrap; }
+    .camp-row .act { cursor: pointer; }
+    .camp-row .act::after { content: " ›"; opacity: .55; }
+
+    /* светофор по ДРР */
+    .tl { display: inline-block; min-width: 42px; text-align: center; padding: 2px 7px; border-radius: 7px; font-weight: 800; }
+    .tl-red { background: rgba(200,111,97,.20); color: #9b3f35; }
+    .tl-yellow { background: rgba(216,169,93,.26); color: #87560f; }
+    .tl-green { background: rgba(125,160,72,.22); color: #4d7029; }
+    .camp-group .tl { font-weight: 900; }
+
+    /* легенда-лесенка светофора */
+    .tl-legend {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      padding: 10px 16px; border-bottom: 1px solid var(--line);
+      font-size: 11.5px; color: var(--muted); background: rgba(255,248,239,.5);
+    }
+    .tl-legend b { color: #3a2416; font-weight: 900; }
+    .tl-legend .seg { display: inline-flex; align-items: center; gap: 6px; }
+    .tl-edit { border: 1px solid var(--line); background: rgba(255,248,239,.8); color: #6c4a2c; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+    .tl-edit:hover { border-color: rgba(201,131,43,.4); background: rgba(216,169,93,.14); }
+    .tl-form { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; font-size: 11.5px; color: #5d4e3c; }
+    .tl-form input { width: 50px; height: 26px; padding: 0 6px; font-size: 12px; border: 1px solid rgba(43,26,19,.18); border-radius: 6px; background: #fff; text-align: center; }
+    .tl-form #tlSave { border: none; background: var(--espresso); color: var(--paper-2); font-weight: 900; font-size: 11px; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+    .tl-form .tl-reset { border: none; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; cursor: pointer; }
+    .tl-form .tl-err { color: #9b433b; font-size: 11px; font-weight: 700; }
+
+    /* ссылки обучения */
+    .learn-links { display: grid; gap: 4px; margin-top: 4px; }
+    .learn-links a {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; text-decoration: none;
+      color: #51412f; font-size: 12.5px; font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .learn-links a:hover { background: rgba(216,169,93,.16); border-color: rgba(201,131,43,.28); }
+    .learn-links a::before { content: "📘"; font-size: 13px; }
+
+    /* модалка объяснения */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(43,26,19,.42); backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-card {
+      position: relative; width: min(560px, 100%); max-height: 86vh; overflow: auto;
+      background: var(--paper-2); border: 1px solid var(--line); border-radius: 12px;
+      box-shadow: var(--shadow); padding: 26px 26px 22px;
+    }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px; width: 32px; height: 32px;
+      border: 1px solid var(--line); background: #fff; border-radius: 8px; cursor: pointer;
+      font-size: 14px; color: var(--muted);
+    }
+    .modal-kicker { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+    .modal-card h2 { margin: 8px 0 4px; font-family: Prata, Georgia, serif; font-weight: 400; font-size: 26px; line-height: 1.1; }
+    .modal-sub { color: #6c5c46; font-size: 13px; line-height: 1.55; margin: 6px 0 16px; }
+    .modal-stat { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
+    .modal-stat .chip { border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; font-size: 11px; font-weight: 800; background: #fff; }
+    .modal-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+    .modal-steps li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; color: #4a3a2a; font-size: 13px; line-height: 1.5; }
+    .modal-steps .num { width: 24px; height: 24px; }
+    .modal-why { background: rgba(43,26,19,.05); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin: 0 0 16px; }
+    .modal-why-h { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 7px; }
+    .modal-why p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: #4a3a2a; }
+    .modal-why p:last-child { margin-bottom: 0; }
+    .modal-why b { font-weight: 900; color: #3a2416; }
+    .dropzone { border: 2px dashed rgba(168,93,54,.5); border-radius: 12px; padding: 22px 16px; text-align: center; color: #6c4a2c; font-size: 13px; background: rgba(168,93,54,.05); transition: background .15s, border-color .15s; }
+    .dropzone.over { border-color: var(--gold); background: rgba(216,169,93,.18); color: #5a2f16; }
+
+    /* ── Логин ───────────────────────────────────────────────── */
+    .login-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+      overflow: hidden;
+      background:
+        radial-gradient(1100px 700px at 80% -10%, rgba(216,169,93,.28), transparent 60%),
+        radial-gradient(900px 600px at -10% 110%, rgba(168,93,54,.22), transparent 55%),
+        linear-gradient(120deg, #2b1a13, #3c281c 55%, #543521);
+    }
+    /* точечная «карта» как в дашборде, мягко на фоне */
+    .login-overlay::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+      background:
+        radial-gradient(circle at 18% 28%, rgba(216,169,93,.5) 0 3px, transparent 4px),
+        radial-gradient(circle at 44% 62%, rgba(201,131,43,.4) 0 4px, transparent 5px),
+        radial-gradient(circle at 72% 34%, rgba(200,111,97,.4) 0 3px, transparent 4px),
+        radial-gradient(circle at 86% 74%, rgba(216,169,93,.35) 0 4px, transparent 5px),
+        linear-gradient(90deg, transparent 0 calc(50% - .5px), rgba(255,248,239,.05) calc(50% - .5px) calc(50% + .5px), transparent calc(50% + .5px));
+      background-size: 220px 220px, 260px 260px, 300px 300px, 280px 280px, 120px 120px;
+      mask-image: radial-gradient(ellipse at 70% 40%, #000 0 55%, transparent 85%);
+    }
+    .login-box {
+      position: relative; z-index: 1;
+      width: min(390px, 100%);
+      background: linear-gradient(180deg, rgba(53,34,24,.92), rgba(38,24,17,.96));
+      border: 1px solid rgba(255,248,239,.14);
+      border-radius: 18px;
+      box-shadow: 0 40px 90px rgba(20,12,8,.55);
+      backdrop-filter: blur(14px);
+      padding: 40px 36px 30px;
+      color: var(--paper-2);
+      text-align: center;
+      animation: loginIn .55s cubic-bezier(.2,.8,.25,1) both;
+    }
+    .login-box::before {
+      content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+      border-radius: 18px 18px 0 0;
+      background: linear-gradient(90deg, var(--rose), var(--gold), var(--champagne));
+    }
+    @keyframes loginIn { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: none; } }
+    .login-owl {
+      width: 66px; height: 66px; margin: 4px auto 16px; display: block;
+      color: var(--champagne);
+      filter: drop-shadow(0 8px 20px rgba(216,169,93,.35));
+      animation: owlFloat 4.5s ease-in-out infinite;
+    }
+    @keyframes owlFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    .login-owl .blink { animation: owlBlink 5.5s infinite; transform-origin: center; }
+    @keyframes owlBlink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+    .login-kicker { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .3em; color: var(--champagne); }
+    .login-box h2 { margin: 6px 0 0; font-family: Prata, Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1; }
+    .login-box .login-sub { color: rgba(255,248,239,.55); font-size: 12.5px; line-height: 1.5; margin: 12px 0 26px; }
+    .login-field { text-align: left; margin-bottom: 13px; }
+    .login-field label { display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .14em; color: rgba(255,248,239,.5); margin-bottom: 6px; }
+    .login-field input {
+      width: 100%; height: 46px; padding: 0 14px; font-size: 14px;
+      background: rgba(255,248,239,.06); color: var(--paper-2);
+      border: 1px solid rgba(255,248,239,.16); border-radius: 10px; outline: none;
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .login-field input::placeholder { color: rgba(255,248,239,.32); }
+    .login-field input:focus { border-color: var(--champagne); background: rgba(255,248,239,.1); box-shadow: 0 0 0 3px rgba(216,169,93,.16); }
+    .login-error { min-height: 18px; font-size: 12px; color: #f3b0a4; margin: 2px 0 8px; font-weight: 700; }
+    .login-btn {
+      width: 100%; height: 48px; margin-top: 6px;
+      background: linear-gradient(135deg, var(--gold), #b06a2f);
+      color: #2b1a13;
+      border: none; border-radius: 10px;
+      font-size: 12px; font-weight: 900; letter-spacing: .22em; text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 14px 30px rgba(201,131,43,.3);
+      transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+    }
+    .login-btn:hover { transform: translateY(-1px); filter: brightness(1.05); box-shadow: 0 18px 38px rgba(201,131,43,.4); }
+    .login-btn:active { transform: translateY(0); }
+    .login-foot { margin-top: 20px; font-size: 11px; color: rgba(255,248,239,.4); font-style: italic; }
+    .login-foot b { color: var(--champagne); font-style: normal; font-weight: 800; }
+    .logout-link { color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; align-self: center; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      border: 1px solid rgba(43,26,19,.11);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      white-space: nowrap;
+    }
+
+    .pill.good { color: #684716; background: rgba(216,169,93,.20); }
+    .pill.warn { color: #8f4f34; background: rgba(168,93,54,.14); }
+    .pill.bad { color: #9b433b; background: rgba(200,111,97,.16); }
+    .pill.ozon { color: #3b2a20; background: rgba(43,26,19,.10); }
+    .pill.ym { color: #8f4f34; background: rgba(168,93,54,.12); }
+    .pill.neutral { color: #5d4e3c; background: rgba(43,26,19,.06); }
+
+    .insights { display: grid; gap: 10px; padding: 14px; }
+
+    .insight {
+      min-height: 102px;
+      border: 1px solid rgba(43,26,19,.10);
+      background: rgba(255,248,239,.94);
+      border-radius: 8px;
+      padding: 13px 13px 13px 17px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .insight::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--gold);
+    }
+
+    .insight[data-tone="bad"]::before { background: var(--rose); }
+    .insight[data-tone="good"]::before { background: var(--champagne); }
+    .insight-title { margin: 0 0 7px; font-size: 14px; font-weight: 900; }
+    .insight-copy { margin: 0; color: #675844; font-size: 12px; line-height: 1.55; }
+
+    .definition-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+    .definition {
+      min-height: 128px;
+      border: 1px solid rgba(43,26,19,.10);
+      background: rgba(255,248,239,.90);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .definition h3 { margin: 0 0 8px; font-family: Prata, Georgia, serif; font-size: 20px; font-weight: 400; }
+    .definition p { margin: 0; color: #675844; font-size: 12px; line-height: 1.55; }
+
+    .knowledge { display: grid; gap: 18px; }
+
+    .knowledge-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+      gap: 16px;
+    }
+
+    .playbook-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .playbook {
+      min-height: 178px;
+      border: 1px solid rgba(43,26,19,.10);
+      background: rgba(255,248,239,.94);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .playbook::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--champagne);
+    }
+
+    .playbook[data-tone="danger"]::before { background: var(--rose); }
+    .playbook[data-tone="money"]::before { background: var(--gold); }
+    .playbook[data-tone="traffic"]::before { background: var(--espresso); }
+
+    .playbook h3 { margin: 0 0 9px; font-size: 15px; line-height: 1.25; font-weight: 900; }
+
+    .steps {
+      margin: 0; padding: 0; list-style: none;
+      display: grid; gap: 7px;
+      color: #675844; font-size: 12px; line-height: 1.45;
+    }
+
+    .steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; }
+
+    .num {
+      width: 22px; height: 22px; border-radius: 999px;
+      display: grid; place-items: center;
+      background: rgba(43,26,19,.08); color: #4a2b17;
+      font-size: 10px; font-weight: 900;
+    }
+
+    .funnel-card { padding: 16px; }
+    .funnel { display: grid; gap: 10px; }
+
+    .funnel-step {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr) 96px;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border: 1px solid rgba(43,26,19,.09);
+      border-radius: 8px;
+      background: rgba(255,255,255,.35);
+    }
+
+    .funnel-name { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .funnel-bar { height: 14px; border-radius: 999px; background: rgba(43,26,19,.08); overflow: hidden; }
+    .funnel-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f1c979, var(--gold)); transition: width .4s ease; }
+    .funnel-value { text-align: right; font-family: Prata, Georgia, serif; font-size: 18px; }
+
+    .checklist { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .checklist th, .checklist td { padding: 12px; border-bottom: 1px solid rgba(43,26,19,.09); vertical-align: top; }
+    .checklist td:first-child { width: 170px; font-weight: 900; color: #3a2416; }
+
+    .mini-slides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px; }
+
+    .slide {
+      min-height: 190px; border-radius: 8px; padding: 16px;
+      background: rgba(43, 26, 19, .90); color: var(--paper-2);
+      box-shadow: 0 18px 50px rgba(43, 26, 19, .14);
+      display: grid; align-content: space-between; gap: 18px;
+      position: relative; overflow: hidden;
+    }
+
+    .slide::after {
+      content: ""; position: absolute; right: -40px; bottom: -46px;
+      width: 150px; height: 150px;
+      border: 1px solid rgba(255,226,166,.22); border-radius: 50%;
+    }
+
+    .slide:nth-child(2) { background: #7c4827; }
+    .slide:nth-child(3) { background: #a85d36; }
+
+    .slide-kicker { color: rgba(255,248,239,.68); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .12em; }
+    .slide h3 { margin: 0; font-family: Prata, Georgia, serif; font-size: 27px; line-height: 1.08; font-weight: 400; }
+    .slide p { margin: 0; color: rgba(255,248,239,.76); font-size: 12px; line-height: 1.55; }
+
+    .terms-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 14px; }
+
+    .term {
+      min-height: 122px; border: 1px solid rgba(43,26,19,.10);
+      border-radius: 8px; background: rgba(255,248,239,.92); padding: 13px;
+    }
+
+    .term strong { display: block; margin-bottom: 7px; font-size: 15px; font-weight: 900; }
+    .term span { display: block; color: #675844; font-size: 12px; line-height: 1.45; }
+
+    /* ── Заглушка / пустое состояние ─────────────────────────── */
+    .stub {
+      padding: 18px; margin: 14px; border-radius: 8px;
+      border: 1px dashed rgba(168,93,54,.4); background: rgba(168,93,54,.06);
+      font-size: 13px; line-height: 1.6; color: #6c4a2c;
+    }
+    .stub b { font-weight: 900; color: #5a2f16; }
+    .skeleton { color: transparent !important; position: relative; border-radius: 6px; }
+    .skeleton::after {
+      content: ""; position: absolute; inset: 0; border-radius: 6px;
+      background: linear-gradient(90deg, rgba(43,26,19,.06), rgba(43,26,19,.13), rgba(43,26,19,.06));
+      background-size: 200% 100%; animation: shimmer 1.3s infinite;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    @media (max-width: 1180px) {
+      .hero, .workspace, .board { grid-template-columns: 1fr; }
+      .panel { position: static; }
+      .metric-grid, .definition-grid, .mini-slides, .terms-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .knowledge-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .app { width: min(100% - 24px, 1500px); padding-top: 18px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      h1 { font-size: 42px; }
+      .summary, .metric-grid, .definition-grid, .playbook-grid, .mini-slides, .terms-grid { grid-template-columns: 1fr; }
+      .funnel-step { grid-template-columns: 1fr; }
+      .funnel-value { text-align: left; }
+      .summary-item { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+      .chart { height: 180px; }
+    }
+  
+.cabbdg{display:inline-block;margin-left:5px;font-size:9.5px;font-weight:800;letter-spacing:.3px;padding:1px 6px;border-radius:6px;vertical-align:middle}
+.cab-ooo{background:rgba(13,148,136,.14);color:#0d9488}
+.cab-ip{background:rgba(217,119,6,.16);color:#b45309}
+</style>
+<style>
+  /* публичная витрина: правки поверх стилей приватного */
+  .login-shell{display:none !important}
   html.dc-dark{filter:invert(.92) hue-rotate(180deg);background:#141210}
-  body{margin:0;font-family:Manrope,'Segoe UI',system-ui,sans-serif;background:var(--paper);color:var(--ink);font-size:13px;line-height:1.45}
-  .app{width:min(1500px,calc(100% - 24px));margin:0 auto;padding:22px 0 40px}
-  .top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
-  h1{font-family:Georgia,serif;font-weight:600;font-size:26px;margin:0}
-  .sub{color:var(--muted);font-size:12px}
-  .stale{color:var(--red);font-weight:700}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:14px 0}
-  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-  .kpi .v{font-family:Georgia,serif;font-size:24px;margin-top:4px}
-  .kpi .l{color:var(--muted);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
-  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
-  .bar input,.bar select{height:30px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);padding:0 8px;font:inherit;font-size:12px}
-  .bar input[type=text]{min-width:220px;flex:1}
-  .legend{color:var(--muted);font-size:11px;margin:4px 0 10px}
-  .tl{display:inline-block;padding:1px 6px;border-radius:6px;font-weight:800;font-size:10.5px;white-space:nowrap}
-  .tl-green{background:var(--green-bg);color:var(--green)} .tl-red{background:var(--red-bg);color:var(--red)} .tl-yellow{background:var(--yellow-bg);color:var(--yellow)}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-  .tbl-wrap{max-height:70vh;overflow:auto}
-  table{width:100%;border-collapse:collapse}
-  th{position:sticky;top:0;z-index:2;background:#efe6d8;color:var(--muted);font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:7px 8px;text-align:right;white-space:nowrap;cursor:pointer}
-  td{padding:6px 8px;border-bottom:1px solid rgba(43,26,19,.06);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px}
-  th:first-child,td:first-child{text-align:left;white-space:normal}
-  tr.camp{cursor:pointer} tr.camp:hover td{background:rgba(216,169,93,.1)}
-  .cname{font-weight:700;font-size:12.5px} .cmeta{color:var(--muted);font-size:10px}
-  .pill{display:inline-block;padding:1px 7px;border-radius:6px;font-size:10px;font-weight:800}
-  .p-wb{background:rgba(203,72,120,.14);color:#98305a} .p-ozon{background:rgba(0,91,255,.12);color:#1b4bbb} .p-ym{background:rgba(255,204,0,.25);color:#7a6000}
-  .detail td{background:rgba(43,26,19,.03)}
-  .dt{width:100%;border-collapse:collapse;margin:4px 0}
-  .dt th{position:static;font-size:8.5px;padding:4px 6px;background:#efe6d8}
-  .dt td{font-size:11px;padding:4px 6px}
-  .act{font-size:10.5px;font-weight:700;white-space:normal;max-width:180px;display:inline-block}
-  .t-bad{color:var(--red)} .t-warn{color:var(--yellow)} .t-good{color:var(--green)}
-  .note{color:var(--muted);font-size:11px;margin-top:10px}
-  .err{background:var(--red-bg);color:var(--red);padding:14px;border-radius:10px;margin:14px 0;font-weight:600;display:none}
-  #themeT{position:fixed;right:14px;bottom:14px;z-index:999;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fffaf2;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.25)}
-  @media (max-width:800px){ th,td{padding:5px 5px;font-size:11px} .act{max-width:120px} }
+  html.dc-dark img,html.dc-dark video,html.dc-dark canvas{filter:invert(1.087) hue-rotate(180deg)}
+  #dcThemeBtn{position:fixed;right:14px;bottom:14px;z-index:9999;width:42px;height:42px;border-radius:50%;border:1px solid rgba(128,110,90,.45);background:rgba(250,246,240,.95);font-size:19px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.28)}
+  .pub-err{display:none;background:rgba(180,120,120,.16);color:#a33b2e;border:1px solid rgba(180,120,120,.35);border-radius:10px;padding:14px 16px;margin:14px 0;font-weight:600;line-height:1.5}
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="top">
-    <h1>☕ АДС · Реклама</h1>
-    <span class="sub" id="updated">загружаю…</span>
-    <span class="sub" id="period"></span>
-    <button onclick="loadAll()" style="height:26px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font:inherit;font-size:11px">↻ обновить</button>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">AD</div>
+        <div>
+          <div class="brand-name">SOWY ADS</div>
+          <div class="brand-meta" id="brandMeta">публичная витрина · данные из Google-таблицы</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="btnRefresh" title="Обновить" onclick="loadAll()">↻</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div>
+        <h1>Реклама, которая говорит человеческим языком.</h1>
+        <p class="hero-copy">Кампании WB, Ozon и Яндекс Маркета: расход, ДРР, CTR, корзины, маржа и рубли на капсулу.
+        Данные выгружает приватный Дашборд-центр — здесь только цифры, без ключей.</p>
+      </div>
+      <div class="summary">
+        <div class="summary-item">
+          <span class="summary-number" id="sumDrr">—</span>
+          <span class="summary-label">средний ДРР</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-number" id="sumRevenue">—</span>
+          <span class="summary-label">рекламная выручка</span>
+          <span class="summary-sub" id="sumSpend"></span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-number" id="sumSignals">—</span>
+          <span class="summary-label">сигналов внимания</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="pub-err" id="pubErr"></div>
+
+    <section class="deep-card" style="margin-top:16px">
+      <div class="deep-head">
+        <div class="deep-title">Кампании</div>
+        <div class="deep-meta" id="campMeta">загружаю…</div>
+      </div>
+      <div class="tl-legend" id="tlLegend"></div>
+      <div class="camp-wrap">
+        <div class="camp-head" id="campHead">
+          <div data-sort="name">Кампания <span class="arrow"></span></div>
+          <div data-sort="plat">Площадка <span class="arrow"></span></div>
+          <div class="r" data-sort="spend">Расход <span class="arrow">▼</span></div>
+          <div class="r" data-sort="drr">ДРР <span class="arrow"></span></div>
+          <div class="r" data-sort="ctr">CTR <span class="arrow"></span></div>
+          <div class="r" data-sort="cart">Корзина <span class="arrow"></span></div>
+          <div class="r" data-sort="margin">Маржа <span class="arrow"></span></div>
+          <div class="r" data-sort="pc">₽/капс <span class="arrow"></span></div>
+          <div>Действие</div>
+        </div>
+        <div class="camp-filters">
+          <div><input id="fName" placeholder="поиск: кампания, товар, SKU…"></div>
+          <div>
+            <select id="fPlat">
+              <option value="">все</option><option value="wb">WB</option><option value="ozon">Ozon</option><option value="ym">ЯМ</option>
+            </select>
+          </div>
+          <div class="r"><input id="fSpend" type="number" inputmode="numeric" placeholder="₽ от"></div>
+          <div><input id="fDrr" type="number" inputmode="numeric" placeholder="ДРР ≤"></div>
+          <div><input id="fCtr" type="number" inputmode="numeric" placeholder="CTR ≥"></div>
+          <div><input id="fCart" type="number" inputmode="numeric" placeholder="≥ %"></div>
+          <div></div>
+          <div></div>
+          <div>
+            <select id="fTone">
+              <option value="">все</option><option value="bad">🔴 красные</option><option value="warn">🟡 жёлтые</option><option value="good">🟢 зелёные</option>
+            </select>
+          </div>
+        </div>
+        <div id="campRows"><div class="camp-empty">Загружаю данные из Google-таблицы…</div></div>
+      </div>
+    </section>
+
+    <div class="cd-note" style="margin-top:12px">Числа в детализации: крупно — за единицу, мелко — всего за период. ₽/капс — прибыль / реклама на 1 капсулу.
+    Если данные устарели — открой приватный АДС и нажми «⬆ Google».</div>
   </div>
-  <div class="err" id="err"></div>
-  <div class="kpis" id="kpis"></div>
-  <div class="bar">
-    <input id="fQ" type="text" placeholder="поиск: кампания, товар, SKU…">
-    <select id="fPlat"><option value="">все площадки</option><option value="wb">WB</option><option value="ozon">Ozon</option><option value="ym">ЯМ</option></select>
-    <select id="fTone"><option value="">все сигналы</option><option value="bad">🔴 красные</option><option value="warn">🟡 жёлтые</option><option value="good">🟢 зелёные</option></select>
-    <label style="font-size:11px;color:var(--muted)"><input id="fSpend" type="checkbox" checked> только с расходом</label>
-  </div>
-  <div class="legend" id="legend"></div>
-  <div class="card"><div class="tbl-wrap"><table>
-    <thead><tr id="hdr">
-      <th data-k="name">Кампания</th><th data-k="plat">Площадка</th><th data-k="spend">Расход ▼</th>
-      <th data-k="drr">ДРР</th><th data-k="ctr">CTR</th><th data-k="cart">Корзина</th>
-      <th data-k="margin">Маржа</th><th data-k="pc">₽/капс</th><th>Действие</th>
-    </tr></thead>
-    <tbody id="rows"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Загружаю данные из Google-таблицы…</td></tr></tbody>
-  </table></div></div>
-  <div class="note">Данные выгружает приватный Дашборд-центр. ₽/капс — прибыль / реклама на 1 капсулу.
-  Клик по кампании — товары и юнит-экономика. Если данные устарели — открой приватный АДС и нажми «⬆ Google».</div>
-</div>
-<button id="themeT" title="тёмная/светлая">🌙</button>
+  <button id="dcThemeBtn" title="тёмная/светлая">🌙</button>
 <script>
-/* ── НАСТРОЙКА: ID Google-таблицы (доступ «все, у кого есть ссылка — читатель») ── */
+/* ── НАСТРОЙКА ── */
 var SHEET_ID = '1XyqlnovR2QmhrCvXXi4vMOw6IOm-o9CbKIuB__B_kaI';
 
-var META = {}, CAMPS = [], GOODS = {}, SORT = { k: 'spend', d: -1 };
+var META = {}, CAMPS = [], GOODS = {}, SORT = { k: 'spend', d: -1 }, EXPANDED = {}, COLLAPSED = {};
 var TL = { profitMin: 5, adsMax: 2, gLow: 4, gHigh: 6, rLow: 3, rHigh: 8 };
+var PLAT_NAME = { wb: 'Wildberries', ozon: 'Ozon', ym: 'Яндекс Маркет' };
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function num(v){ var n=parseFloat(String(v==null?'':v).replace(/\s/g,'').replace(',','.')); return isNaN(n)?null:n; }
+function fmtMoney(n){ return (Math.round(n)||0).toLocaleString('ru-RU')+' ₽'; }
+function fmtNum(n){ return (Math.round(n)||0).toLocaleString('ru-RU'); }
+function pct(n,d){ return n==null?'—':n.toLocaleString('ru-RU',{maximumFractionDigits:d==null?1:d})+'%'; }
+function fmtCaps(v){ return v==null?'—':v.toLocaleString('ru-RU',{maximumFractionDigits:2}); }
+function platPill(p){ return p==='wb'?'good':p==='ozon'?'ozon':'ym'; }
+function platLabel(p){ return p==='wb'?'WB':p==='ozon'?'Ozon':'ЯМ'; }
+function cabShort(c){ return /ип|тимашков/i.test(String(c||''))?'ИП':'ООО'; }
 
-function gviz(sheet) {
-  return 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(sheet) + '&_=' + Date.now();
+function drrLight(d,spend,rev){ if(d==null||!(spend>0)||!(rev>0))return ''; if(d>TL.rHigh||d<TL.rLow)return 'red'; if(d>=TL.gLow&&d<=TL.gHigh)return 'green'; return 'yellow'; }
+function mLight(m){ return m==null?'':(m>=15?'green':(m>=0?'yellow':'red')); }
+function pcLight(v){ return v==null?'':(v>=TL.profitMin?'green':(v>=TL.profitMin*0.9?'yellow':'red')); }
+function acLight(v){ return v==null?'':(v<=TL.adsMax?'green':(v<=TL.adsMax*1.1?'yellow':'red')); }
+function tlSpan(v,light,suf){ if(v==null)return '—'; var t=v.toLocaleString('ru-RU',{maximumFractionDigits:2})+(suf||''); return light?'<span class="tl tl-'+light+'">'+t+'</span>':t; }
+function capsPair(pc,ac){
+  if(pc==null&&ac==null) return '—';
+  var A=pc!=null?'<span class="tl tl-'+pcLight(pc)+'" title="прибыль ₽/капс (лимит ≥ '+TL.profitMin+')">'+fmtCaps(pc)+'</span>':'—';
+  var B=ac!=null?'<span class="tl tl-'+acLight(ac)+'" title="реклама ₽/капс (лимит ≤ '+TL.adsMax+')">'+fmtCaps(ac)+'</span>':'—';
+  return A+'<span style="color:var(--muted)">/</span>'+B;
 }
-function parseCsv(s) {
-  var rows = [], row = [], cur = '', q = false;
-  for (var i = 0; i < s.length; i++) {
-    var ch = s[i];
-    if (q) { if (ch === '"') { if (s[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
-    else if (ch === '"') q = true;
-    else if (ch === ',') { row.push(cur); cur = ''; }
-    else if (ch === '\n' || ch === '\r') { if (ch === '\r' && s[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.length > 1 || row[0] !== '') rows.push(row); row = []; }
-    else cur += ch;
+
+/* ── Google-таблица ── */
+function gviz(sheet){ return 'https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(sheet)+'&_='+Date.now(); }
+function parseCsv(s){
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<s.length;i++){var ch=s[i];
+    if(q){ if(ch==='"'){ if(s[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"')q=true;
+    else if(ch===','){row.push(cur);cur='';}
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&s[i+1]==='\n')i++; row.push(cur);cur=''; if(row.length>1||row[0]!=='')rows.push(row); row=[]; }
+    else cur+=ch;
   }
-  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
   return rows;
 }
-function toObjs(rows) {
-  if (!rows.length) return [];
-  var h = rows[0].map(function (x) { return String(x || '').trim(); });
-  return rows.slice(1).map(function (r) { var o = {}; h.forEach(function (k, i) { o[k] = r[i] != null ? r[i] : ''; }); return o; });
-}
-function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n; }
-function fmtM(n) { return (Math.round(n) || 0).toLocaleString('ru-RU'); }
-function pct(n, d) { return n == null ? '—' : n.toLocaleString('ru-RU', { maximumFractionDigits: d == null ? 1 : d }) + '%'; }
-function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-
-function drrLight(d, spend, rev) {
-  if (d == null || !(spend > 0) || !(rev > 0)) return '';
-  if (d > TL.rHigh || d < TL.rLow) return 'red';
-  if (d >= TL.gLow && d <= TL.gHigh) return 'green';
-  return 'yellow';
-}
-function mLight(m) { return m == null ? '' : (m >= 15 ? 'green' : (m >= 0 ? 'yellow' : 'red')); }
-function pcLight(v) { return v == null ? '' : (v >= TL.profitMin ? 'green' : (v >= TL.profitMin * 0.9 ? 'yellow' : 'red')); }
-function acLight(v) { return v == null ? '' : (v <= TL.adsMax ? 'green' : (v <= TL.adsMax * 1.1 ? 'yellow' : 'red')); }
-function tlSpan(v, light, suf) { if (v == null) return '—'; var t = v.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + (suf || ''); return light ? '<span class="tl tl-' + light + '">' + t + '</span>' : t; }
-
-async function fetchSheet(name, raw) {
-  var r = await fetch(gviz(name), { cache: 'no-store' });
-  if (!r.ok) throw new Error(name + ': HTTP ' + r.status);
-  var t = await r.text();
-  if (t.charAt(0) === '<') throw new Error(name + ': таблица не открыта по ссылке (Настройки доступа → «Все, у кого есть ссылка — читатель»)');
-  var rows = parseCsv(t);
-  return raw ? rows : toObjs(rows);
+function toObjs(rows){ if(!rows.length)return[]; var h=rows[0].map(function(x){return String(x||'').trim();}); return rows.slice(1).map(function(r){var o={};h.forEach(function(k,i){o[k]=r[i]!=null?r[i]:'';});return o;}); }
+async function fetchSheet(name,raw){
+  var r;
+  try{ r=await fetch(gviz(name),{cache:'no-store'}); }
+  catch(e){ throw new Error('ACCESS'); }
+  if(!r.ok) throw new Error(name+': HTTP '+r.status);
+  var t=await r.text();
+  if(t.charAt(0)==='<') throw new Error('ACCESS');
+  var rows=parseCsv(t);
+  return raw?rows:toObjs(rows);
 }
 
-async function loadAll() {
-  var err = document.getElementById('err'); err.style.display = 'none';
-  try {
-    var res = await Promise.all([fetchSheet('кампании'), fetchSheet('товары'), fetchSheet('мета', true)]);
-    CAMPS = res[0].map(function (o) {
-      return { plat: o['площадка'], cab: o['кабинет'], id: o['id'], name: o['название'], type: o['тип'], status: o['статус'],
-        spend: num(o['расход']) || 0, revenue: num(o['выручка']) || 0, drr: num(o['дрр_%']), ctr: num(o['ctr_%']), cart: num(o['корзина_%']),
-        margin: num(o['маржа_%']), pc: num(o['приб_капс']), ac: num(o['рекл_капс']), tone: o['сигнал'] || '', action: o['действие'] || '' };
-    }).filter(function (c) { return c.name; });
-    GOODS = {};
-    res[1].forEach(function (o) {
-      var k = o['площадка'] + ':' + o['кампания_id'];
-      (GOODS[k] = GOODS[k] || []).push(o);
-    });
-    META = {};
-    res[2].forEach(function (r) { if (r && r[0] != null) META[String(r[0]).trim()] = r[1]; });
-    var readTl = function (k, cur) { var v = num(META[k]); return v == null ? cur : v; };
-    TL.profitMin = readTl('лимит_приб_капс', TL.profitMin); TL.adsMax = readTl('лимит_рекл_капс', TL.adsMax);
-    TL.gLow = readTl('дрр_зел_от', TL.gLow); TL.gHigh = readTl('дрр_зел_до', TL.gHigh);
-    TL.rLow = readTl('дрр_красн_низ', TL.rLow); TL.rHigh = readTl('дрр_красн_верх', TL.rHigh);
+async function loadAll(){
+  var err=$('pubErr'); err.style.display='none';
+  try{
+    var res=await Promise.all([fetchSheet('кампании'),fetchSheet('товары'),fetchSheet('мета',true)]);
+    CAMPS=res[0].map(function(o){
+      return { plat:o['площадка'],cab:o['кабинет'],id:o['id'],name:o['название'],type:o['тип'],status:o['статус'],
+        spend:num(o['расход'])||0,revenue:num(o['выручка'])||0,drr:num(o['дрр_%']),ctr:num(o['ctr_%']),cart:num(o['корзина_%']),
+        margin:num(o['маржа_%']),pc:num(o['приб_капс']),ac:num(o['рекл_капс']),tone:o['сигнал']||'',action:o['действие']||'' };
+    }).filter(function(c){return c.name;});
+    GOODS={};
+    res[1].forEach(function(o){ var k=o['площадка']+':'+o['кампания_id']; (GOODS[k]=GOODS[k]||[]).push(o); });
+    META={};
+    res[2].forEach(function(r){ if(r&&r[0]!=null)META[String(r[0]).trim()]=r[1]; });
+    var rd=function(k,c){var v=num(META[k]);return v==null?c:v;};
+    TL.profitMin=rd('лимит_приб_капс',TL.profitMin); TL.adsMax=rd('лимит_рекл_капс',TL.adsMax);
+    TL.gLow=rd('дрр_зел_от',TL.gLow); TL.gHigh=rd('дрр_зел_до',TL.gHigh); TL.rLow=rd('дрр_красн_низ',TL.rLow); TL.rHigh=rd('дрр_красн_верх',TL.rHigh);
+    if(!CAMPS.length){
+      err.innerHTML='Таблица пока пустая. Открой приватный АДС в Дашборд-центре и нажми <b>«⬆ Google»</b> — цифры появятся здесь через минуту.';
+      err.style.display='block';
+    }
     renderMeta(); render();
-  } catch (e) {
-    err.textContent = 'Не удалось загрузить данные: ' + e.message;
-    err.style.display = 'block';
-    document.getElementById('updated').textContent = 'ошибка загрузки';
+  }catch(e){
+    var msg = e.message==='ACCESS'
+      ? 'Нет доступа к Google-таблице. Открой таблицу → «Настройки доступа» → <b>«Все, у кого есть ссылка» — «Читатель»</b>. После этого нажми ↻.'
+      : 'Не удалось загрузить данные: '+esc(e.message);
+    err.innerHTML=msg; err.style.display='block';
+    $('campMeta').textContent='ошибка загрузки';
+    $('campRows').innerHTML='<div class="camp-empty">Нет данных</div>';
   }
 }
 
-function renderMeta() {
-  var up = META['обновлено'] ? new Date(META['обновлено']) : null;
-  var el = document.getElementById('updated');
-  if (up && !isNaN(up)) {
-    var h = (Date.now() - up.getTime()) / 3600000;
-    var txt = 'обновлено ' + up.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    el.innerHTML = h > 26 ? txt + ' · <span class="stale">данные устарели</span>' : txt;
-  } else el.textContent = 'дата обновления неизвестна';
-  document.getElementById('period').textContent = META['период_дней'] ? '· период ' + META['период_дней'] + ' дн' : '';
-  document.getElementById('legend').innerHTML = 'Светофоры — ДРР: <span class="tl tl-green">' + TL.gLow + '–' + TL.gHigh + '%</span> норма, <span class="tl tl-red">&lt;' + TL.rLow + ' · &gt;' + TL.rHigh + '%</span> плохо · ₽/капсула: прибыль ≥ <span class="tl tl-green">' + TL.profitMin + ' ₽</span>, реклама ≤ <span class="tl tl-green">' + TL.adsMax + ' ₽</span>';
+function renderMeta(){
+  var up=META['обновлено']?new Date(META['обновлено']):null;
+  var meta='';
+  if(up&&!isNaN(up)){
+    var h=(Date.now()-up.getTime())/3600000;
+    meta='обновлено '+up.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    if(h>26)meta+=' · ⚠ данные устарели';
+  } else meta='дата обновления неизвестна';
+  if(META['период_дней'])meta+=' · период '+META['период_дней']+' дн';
+  $('campMeta').textContent=meta;
+  $('brandMeta').textContent='публичная витрина · '+meta;
+  $('tlLegend').innerHTML='<b>Светофор ДРР:</b>'+
+    '<span class="seg"><span class="tl tl-green">'+TL.gLow+'–'+TL.gHigh+'%</span> норма</span>'+
+    '<span class="seg"><span class="tl tl-yellow">'+TL.rLow+'–'+TL.gLow+' · '+TL.gHigh+'–'+TL.rHigh+'%</span> под наблюдением</span>'+
+    '<span class="seg"><span class="tl tl-red">&lt;'+TL.rLow+' · &gt;'+TL.rHigh+'%</span> мало рекламы / дорого</span>'+
+    '<span class="seg" style="margin-left:12px"><b>₽/капсула:</b> прибыль ≥ <span class="tl tl-green">'+TL.profitMin+' ₽</span> · реклама ≤ <span class="tl tl-green">'+TL.adsMax+' ₽</span></span>';
 }
 
-var EXPANDED = {};
-function filtered() {
-  var q = document.getElementById('fQ').value.trim().toLowerCase();
-  var p = document.getElementById('fPlat').value;
-  var t = document.getElementById('fTone').value;
-  var sp = document.getElementById('fSpend').checked;
-  return CAMPS.filter(function (c) {
-    if (p && c.plat !== p) return false;
-    if (t && c.tone !== t) return false;
-    if (sp && !(c.spend > 0)) return false;
-    if (q) {
-      var hay = (c.name + ' ' + c.id + ' ' + (GOODS[c.plat + ':' + c.id] || []).map(function (g) { return g['товар'] + ' ' + g['sku']; }).join(' ')).toLowerCase();
-      if (hay.indexOf(q) < 0) return false;
+function filtered(){
+  var q=($('fName').value||'').trim().toLowerCase();
+  var p=$('fPlat').value, t=$('fTone').value;
+  var sMin=num($('fSpend').value), dMax=num($('fDrr').value), cMin=num($('fCtr').value), kMin=num($('fCart').value);
+  return CAMPS.filter(function(c){
+    if(p&&c.plat!==p)return false;
+    if(t&&c.tone!==t)return false;
+    if(sMin!=null&&!(c.spend>=sMin))return false;
+    if(dMax!=null&&!(c.drr!=null&&c.drr<=dMax))return false;
+    if(cMin!=null&&!(c.ctr!=null&&c.ctr>=cMin))return false;
+    if(kMin!=null&&!(c.cart!=null&&c.cart>=kMin))return false;
+    if(q){
+      var hay=(c.name+' '+c.id+' '+(GOODS[c.plat+':'+c.id]||[]).map(function(g){return g['товар']+' '+g['sku'];}).join(' ')).toLowerCase();
+      if(hay.indexOf(q)<0)return false;
     }
     return true;
-  }).sort(function (a, b) {
-    var k = SORT.k, d = SORT.d;
-    var av = k === 'name' ? a.name : (k === 'plat' ? a.plat : a[k]);
-    var bv = k === 'name' ? b.name : (k === 'plat' ? b.plat : b[k]);
-    if (typeof av === 'string' || typeof bv === 'string') return d * String(av || '').localeCompare(String(bv || ''), 'ru');
-    return d * ((av == null ? -1e15 : av) - (bv == null ? -1e15 : bv));
+  }).sort(function(a,b){
+    var k=SORT.k,d=SORT.d;
+    var av=k==='name'?a.name:(k==='plat'?a.plat:a[k]);
+    var bv=k==='name'?b.name:(k==='plat'?b.plat:b[k]);
+    if(typeof av==='string'||typeof bv==='string')return d*String(av||'').localeCompare(String(bv||''),'ru');
+    return d*((av==null?-1e15:av)-(bv==null?-1e15:bv));
   });
 }
 
-function render() {
-  var data = filtered();
-  var spend = 0, rev = 0, withSpend = 0;
-  CAMPS.forEach(function (c) { spend += c.spend; rev += c.revenue; if (c.spend > 0) withSpend++; });
-  document.getElementById('kpis').innerHTML =
-    '<div class="kpi"><div class="l">Расход на рекламу</div><div class="v">' + fmtM(spend) + ' ₽</div></div>' +
-    '<div class="kpi"><div class="l">Рекламная выручка</div><div class="v">' + fmtM(rev) + ' ₽</div></div>' +
-    '<div class="kpi"><div class="l">Средний ДРР</div><div class="v">' + (rev > 0 ? pct(spend / rev * 100) : '—') + '</div></div>' +
-    '<div class="kpi"><div class="l">Кампаний / с расходом</div><div class="v">' + CAMPS.length + ' / ' + withSpend + '</div></div>';
-
-  var pillCls = { wb: 'p-wb', ozon: 'p-ozon', ym: 'p-ym' };
-  var platNm = { wb: 'WB', ozon: 'Ozon', ym: 'ЯМ' };
-  var toneCls = { bad: 't-bad', warn: 't-warn', good: 't-good' };
-  document.getElementById('rows').innerHTML = data.length ? data.map(function (c) {
-    var key = c.plat + ':' + c.id;
-    var pcCell = (c.pc == null && c.ac == null) ? '—'
-      : tlSpan(c.pc, pcLight(c.pc)) + ' <span style="color:var(--muted)">/</span> ' + tlSpan(c.ac, acLight(c.ac));
-    var html = '<tr class="camp" data-k="' + esc(key) + '">' +
-      '<td><span class="cname">' + esc(c.name) + '</span><div class="cmeta">' + esc((c.type || '') + (c.status ? ' · ' + c.status : '') + (c.cab ? ' · ' + c.cab : '')) + '</div></td>' +
-      '<td><span class="pill ' + (pillCls[c.plat] || '') + '">' + (platNm[c.plat] || esc(c.plat)) + '</span></td>' +
-      '<td>' + (c.spend > 0 ? fmtM(c.spend) + ' ₽' : '—') + '</td>' +
-      '<td>' + tlSpan(c.drr, drrLight(c.drr, c.spend, c.revenue), '%') + '</td>' +
-      '<td>' + pct(c.ctr, 2) + '</td>' +
-      '<td>' + pct(c.cart) + '</td>' +
-      '<td>' + tlSpan(c.margin, mLight(c.margin), '%') + '</td>' +
-      '<td>' + pcCell + '</td>' +
-      '<td style="text-align:left"><span class="act ' + (toneCls[c.tone] || '') + '">' + esc(c.action || '') + '</span></td></tr>';
-    if (EXPANDED[key]) html += detailRow(key);
-    return html;
-  }).join('') : '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">Ничего не найдено</td></tr>';
+function groupHTML(p,list){
+  var spend=0,rev=0,mW=0,mR=0,pcW=0,acW=0,capsR=0;
+  list.forEach(function(c){ spend+=c.spend; rev+=c.revenue;
+    if(c.margin!=null&&c.revenue>0){mW+=c.margin*c.revenue;mR+=c.revenue;}
+    if(c.pc!=null&&c.revenue>0){pcW+=c.pc*c.revenue;acW+=(c.ac||0)*c.revenue;capsR+=c.revenue;}
+  });
+  var drr=rev>0?spend/rev*100:null;
+  var gm=mR>0?mW/mR:null, gpc=capsR>0?pcW/capsR:null, gac=capsR>0?acW/capsR:null;
+  var collapsed=!!COLLAPSED[p];
+  return '<div class="camp-group" data-group="'+p+'" title="Свернуть/развернуть площадку">'+
+    '<div class="gname" style="grid-column:span 2"><span class="gchev">'+(collapsed?'▶':'▼')+'</span><span class="pill '+platPill(p)+'">'+platLabel(p)+'</span> '+esc(PLAT_NAME[p]||p)+
+      ' <small>· '+list.length+' кампаний · реклама '+(rev>0?fmtMoney(rev):'—')+'</small></div>'+
+    '<div class="r">'+(spend>0?fmtMoney(spend):'—')+'</div>'+
+    '<div class="r">'+tlSpan(drr,drrLight(drr,spend,rev),'%')+'</div>'+
+    '<div class="r"></div><div class="r"></div>'+
+    '<div class="r">'+(gm!=null?tlSpan(gm,mLight(gm),'%'):'')+'</div>'+
+    '<div class="r" style="white-space:nowrap">'+(gpc!=null?capsPair(gpc,gac):'')+'</div>'+
+    '<div></div></div>';
 }
 
-function detailRow(key) {
-  var g = GOODS[key] || [];
-  if (!g.length) return '<tr class="detail"><td colspan="9" style="text-align:left;color:var(--muted)">Товары кампании не выгружены (раскрой кампанию в приватном АДС и повтори «⬆ Google»).</td></tr>';
-  var h = '<tr class="detail"><td colspan="9" style="text-align:left"><div style="overflow:auto"><table class="dt"><thead><tr>' +
-    '<th style="text-align:left">Товар</th><th>Заказы</th><th>Выручка</th><th>Цена/ед</th><th>Себест/ед</th><th>Комис/ед</th><th>Логист/ед</th><th>Реклама/ед</th><th>Прибыль/ед</th><th>Маржа</th><th>Приб ₽/капс</th><th>Рекл ₽/капс</th><th>Остаток</th>' +
-    '</tr></thead><tbody>' +
-    g.map(function (r) {
-      var m = num(r['маржа_%']), pc = num(r['приб_капс']), ac = num(r['рекл_капс']);
-      return '<tr><td style="text-align:left">' + esc(r['товар'] || r['sku']) + '<div class="cmeta">' + esc(r['sku'] || '') + '</div></td>' +
-        '<td>' + esc(r['заказы'] || '—') + '</td><td>' + (num(r['выручка']) != null ? fmtM(num(r['выручка'])) + ' ₽' : '—') + '</td>' +
-        ['цена_ед', 'себест_ед', 'комис_ед', 'логист_ед', 'реклама_ед', 'прибыль_ед'].map(function (k) { var v = num(r[k]); return '<td>' + (v != null && v !== 0 ? fmtM(v) + ' ₽' : '—') + '</td>'; }).join('') +
-        '<td>' + tlSpan(m, mLight(m), '%') + '</td>' +
-        '<td>' + tlSpan(pc, pcLight(pc)) + '</td>' +
-        '<td>' + tlSpan(ac, acLight(ac)) + '</td>' +
-        '<td>' + esc(r['остаток'] || '—') + '</td></tr>';
-    }).join('') + '</tbody></table></div></td></tr>';
-  return h;
+function rowHTML(c){
+  var key=c.plat+':'+c.id;
+  var exp=!!EXPANDED[key];
+  var light=drrLight(c.drr,c.spend,c.revenue);
+  return '<div class="camp-row'+(exp?' exp':'')+'" data-key="'+esc(key)+'">'+
+    '<div class="camp-name"><span class="rchev">'+(exp?'▾':'▸')+'</span><div class="cn"><strong>'+esc(c.name)+'</strong><span>'+esc((c.type||'')+(c.status?' · '+c.status:''))+'</span></div></div>'+
+    '<div style="white-space:nowrap"><span class="pill '+platPill(c.plat)+'">'+platLabel(c.plat)+'</span>'+(c.cab?'<span class="cabbdg cab-'+(cabShort(c.cab)==='ИП'?'ip':'ooo')+'">'+esc(cabShort(c.cab))+'</span>':'')+'</div>'+
+    '<div class="r">'+(c.spend>0?fmtMoney(c.spend):'—')+'</div>'+
+    '<div class="r">'+tlSpan(c.drr,light,'%')+'</div>'+
+    '<div class="r">'+pct(c.ctr,2)+'</div>'+
+    '<div class="r">'+pct(c.cart)+'</div>'+
+    '<div class="r">'+(c.margin!=null?tlSpan(c.margin,mLight(c.margin),'%'):'<span style="color:var(--muted)">—</span>')+'</div>'+
+    '<div class="r" style="white-space:nowrap">'+capsPair(c.pc,c.ac)+'</div>'+
+    '<div><span class="pill '+(c.tone||'')+' act">'+esc(c.action||'—')+'</span></div>'+
+    '</div>'+(exp?detailHTML(key):'');
 }
 
-document.getElementById('rows').addEventListener('click', function (e) {
-  var tr = e.target.closest('tr.camp'); if (!tr) return;
-  var k = tr.getAttribute('data-k');
-  EXPANDED[k] = !EXPANDED[k];
+function detailHTML(key){
+  var g=GOODS[key]||[];
+  if(!g.length)return '<div class="camp-detail"><div class="cd-note">Товары кампании не выгружены — раскрой её в приватном АДС и повтори «⬆ Google».</div></div>';
+  function dual(per,tot){ if(!(per>0))return '—'; return '<b>'+fmtMoney(per)+'</b><div class="cd-tot">'+(tot>0?fmtMoney(tot)+' всего':'—')+'</div>'; }
+  var rows=g.map(function(r){
+    var o=num(r['заказы'])||0, m=num(r['маржа_%']), pc=num(r['приб_капс']), ac=num(r['рекл_капс']);
+    var price=num(r['цена_ед'])||0, cost=num(r['себест_ед'])||0, comm=num(r['комис_ед'])||0, logi=num(r['логист_ед'])||0, store=num(r['хранение_ед'])||0, ads=num(r['реклама_ед'])||0, profit=num(r['прибыль_ед']);
+    return '<tr><td>'+esc(r['товар']||r['sku'])+(r['sku']?'<div class="cd-meta">'+esc(r['sku'])+'</div>':'')+'</td>'+
+      '<td>'+(o?fmtNum(o):'—')+'</td>'+
+      '<td>'+(num(r['выручка'])?fmtMoney(num(r['выручка'])):'—')+'</td>'+
+      '<td>'+(price>0?'<b>'+fmtMoney(price)+'</b>':'—')+'</td>'+
+      '<td>'+dual(cost,cost*o)+'</td>'+
+      '<td>'+dual(comm,comm*o)+'</td>'+
+      '<td>'+dual(logi,logi*o)+'</td>'+
+      '<td>'+(store>0?dual(store,store*o):'—')+'</td>'+
+      '<td>'+dual(ads,ads*o)+'</td>'+
+      '<td><b>'+(profit!=null?fmtMoney(profit):'—')+'</b>'+(profit!=null&&o>0?'<div class="cd-tot">'+fmtMoney(profit*o)+' всего</div>':'')+'</td>'+
+      '<td>'+(m!=null?'<span class="tl tl-'+mLight(m)+'">'+pct(m)+'</span>':'—')+'</td>'+
+      '<td>'+(pc!=null?'<span class="tl tl-'+pcLight(pc)+'">'+fmtCaps(pc)+' ₽</span>':'—')+'</td>'+
+      '<td>'+(ac!=null?'<span class="tl tl-'+acLight(ac)+'">'+fmtCaps(ac)+' ₽</span>':'—')+'</td>'+
+      '<td>'+esc(r['остаток']||'—')+'</td></tr>';
+  }).join('');
+  return '<div class="camp-detail"><div class="cd-h">Товары кампании · юнит-экономика ('+g.length+')</div>'+
+    '<div class="cd-scroll"><table class="cd-tbl"><thead><tr>'+
+    '<th>Товар</th><th>Заказы</th><th>Выручка</th><th>Цена /ед</th><th>Себест /ед</th><th>Комис /ед</th><th>Логист /ед</th><th>Хранен /ед</th><th>Реклама /ед</th><th>Прибыль /ед</th><th>Маржа</th><th>Приб ₽/капс</th><th>Рекл ₽/капс</th><th>Остаток</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function render(){
+  var data=filtered();
+  var spend=0,rev=0,signals=0;
+  CAMPS.forEach(function(c){spend+=c.spend;rev+=c.revenue;if(c.tone==='bad'||c.tone==='warn')signals++;});
+  $('sumDrr').textContent=rev>0?pct(spend/rev*100):'—';
+  $('sumRevenue').textContent=rev>0?fmtNum(rev)+' ₽':'—';
+  $('sumSpend').textContent=spend>0?'расход '+fmtNum(spend)+' ₽':'';
+  $('sumSignals').textContent=signals;
+
+  var byPlat={};
+  data.forEach(function(c){(byPlat[c.plat]=byPlat[c.plat]||[]).push(c);});
+  var html='';
+  ['ozon','wb','ym'].concat(Object.keys(byPlat).filter(function(p){return ['ozon','wb','ym'].indexOf(p)<0;})).forEach(function(p){
+    var list=byPlat[p]; if(!list||!list.length)return;
+    html+=groupHTML(p,list);
+    if(!COLLAPSED[p]) html+=list.map(rowHTML).join('');
+  });
+  $('campRows').innerHTML=html||'<div class="camp-empty">Ничего не найдено</div>';
+}
+
+$('campRows').addEventListener('click',function(e){
+  var grp=e.target.closest('.camp-group');
+  if(grp){var p=grp.getAttribute('data-group');COLLAPSED[p]=!COLLAPSED[p];render();return;}
+  if(e.target.closest('.camp-detail'))return;
+  var row=e.target.closest('.camp-row'); if(!row)return;
+  var k=row.getAttribute('data-key'); EXPANDED[k]=!EXPANDED[k]; render();
+});
+$('campHead').addEventListener('click',function(e){
+  var th=e.target.closest('div[data-sort]'); if(!th)return;
+  var k=th.getAttribute('data-sort');
+  if(SORT.k===k)SORT.d=-SORT.d; else{SORT.k=k;SORT.d=-1;}
+  document.querySelectorAll('#campHead .arrow').forEach(function(a){a.textContent='';});
+  th.querySelector('.arrow').textContent=SORT.d<0?'▼':'▲';
   render();
 });
-document.getElementById('hdr').addEventListener('click', function (e) {
-  var th = e.target.closest('th[data-k]'); if (!th) return;
-  var k = th.getAttribute('data-k');
-  if (SORT.k === k) SORT.d = -SORT.d; else { SORT.k = k; SORT.d = -1; }
-  document.querySelectorAll('#hdr th').forEach(function (t) { t.textContent = t.textContent.replace(/ [▼▲]/, ''); });
-  th.textContent += SORT.d < 0 ? ' ▼' : ' ▲';
-  render();
-});
-['fQ', 'fPlat', 'fTone', 'fSpend'].forEach(function (id) {
-  document.getElementById(id).addEventListener(id === 'fQ' ? 'input' : 'change', render);
+['fName','fPlat','fSpend','fDrr','fCtr','fCart','fTone'].forEach(function(id){
+  $(id).addEventListener(id==='fName'?'input':'change',render);
 });
 
 /* тема */
-function applyT(t) { document.documentElement.classList.toggle('dc-dark', t === 'dark'); document.getElementById('themeT').textContent = t === 'dark' ? '☀️' : '🌙'; }
-document.getElementById('themeT').addEventListener('click', function () {
-  var t = document.documentElement.classList.contains('dc-dark') ? 'light' : 'dark';
-  try { localStorage.setItem('ads_pub_theme', t); } catch (e) {}
-  applyT(t);
-});
-try { applyT(localStorage.getItem('ads_pub_theme') || 'light'); } catch (e) {}
+function applyT(t){document.documentElement.classList.toggle('dc-dark',t==='dark');$('dcThemeBtn').textContent=t==='dark'?'☀️':'🌙';}
+$('dcThemeBtn').addEventListener('click',function(){var t=document.documentElement.classList.contains('dc-dark')?'light':'dark';try{localStorage.setItem('ads_pub_theme',t)}catch(e){}applyT(t);});
+try{applyT(localStorage.getItem('ads_pub_theme')||'light');}catch(e){}
 
 loadAll();
-setInterval(loadAll, 15 * 60 * 1000);   // автообновление каждые 15 минут
+setInterval(loadAll,15*60*1000);
 </script>
 </body>
 </html>
