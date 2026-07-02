@@ -972,6 +972,24 @@
       </div>
     </section>
 
+    <section class="definition-grid" style="margin-top:16px">
+      <div class="definition">
+        <h3>ДРР</h3>
+        <p>Сколько рекламы потратили на 100 рублей рекламной выручки. Если растёт, реклама начинает съедать маржу. У кофе-капсул маржа тонкая, поэтому ДРР держим в узком коридоре.</p>
+      </div>
+      <div class="definition">
+        <h3>CTR</h3>
+        <p>Люди увидели рекламу и кликнули. Если низкий, смотри обложку, цену, рейтинг, позицию и релевантность запроса. На ЯМ ещё важны условия доставки и видимость оффера.</p>
+      </div>
+      <div class="definition">
+        <h3>Корзина</h3>
+        <p>Клик превратился в желание купить. Если падает, проверяем остатки (по складам в Сове), цену, конкурентов, карточку и доставку.</p>
+      </div>
+      <div class="definition">
+        <h3>₽ на капсулу</h3>
+        <p>Прибыль и реклама, пересчитанные на одну капсулу. Прибыль ниже лимита — красный: вышли за экономику. Реклама выше лимита — платим за продажу больше, чем можем себе позволить.</p>
+      </div>
+    </section>
     <div class="cd-note" style="margin-top:12px">Числа в детализации: крупно — за единицу, мелко — всего за период. ₽/капс — прибыль / реклама на 1 капсулу.
     Если данные устарели — открой приватный АДС и нажми «⬆ Google».</div>
   </div>
@@ -1039,7 +1057,8 @@ async function loadAll(){
     CAMPS=res[0].map(function(o){
       return { plat:o['площадка'],cab:o['кабинет'],id:o['id'],name:o['название'],type:o['тип'],status:o['статус'],
         spend:num(o['расход'])||0,revenue:num(o['выручка'])||0,drr:num(o['дрр_%']),ctr:num(o['ctr_%']),cart:num(o['корзина_%']),
-        margin:num(o['маржа_%']),pc:num(o['приб_капс']),ac:num(o['рекл_капс']),tone:o['сигнал']||'',action:o['действие']||'' };
+        margin:num(o['маржа_%']),pc:num(o['приб_капс']),ac:num(o['рекл_капс']),tone:o['сигнал']||'',action:o['действие']||'',
+        views:num(o['показы'])||0,clicks:num(o['клики'])||0,orders:num(o['заказы'])||0,cpc:num(o['cpc']) };
     }).filter(function(c){return c.name;});
     GOODS={};
     res[1].forEach(function(o){ var k=o['площадка']+':'+o['кампания_id']; (GOODS[k]=GOODS[k]||[]).push(o); });
@@ -1107,8 +1126,10 @@ function filtered(){
 }
 
 function groupHTML(p,list){
-  var spend=0,rev=0,mW=0,mR=0,pcW=0,acW=0,capsR=0;
+  var spend=0,rev=0,mW=0,mR=0,pcW=0,acW=0,capsR=0,vSum=0,cSum=0,cartW=0,cartS=0;
   list.forEach(function(c){ spend+=c.spend; rev+=c.revenue;
+    vSum+=c.views||0; cSum+=c.clicks||0;
+    if(c.cart!=null&&c.spend>0){cartW+=c.cart*c.spend;cartS+=c.spend;}
     if(c.margin!=null&&c.revenue>0){mW+=c.margin*c.revenue;mR+=c.revenue;}
     if(c.pc!=null&&c.revenue>0){pcW+=c.pc*c.revenue;acW+=(c.ac||0)*c.revenue;capsR+=c.revenue;}
   });
@@ -1120,7 +1141,8 @@ function groupHTML(p,list){
       ' <small>· '+list.length+' кампаний · реклама '+(rev>0?fmtMoney(rev):'—')+'</small></div>'+
     '<div class="r">'+(spend>0?fmtMoney(spend):'—')+'</div>'+
     '<div class="r">'+tlSpan(drr,drrLight(drr,spend,rev),'%')+'</div>'+
-    '<div class="r"></div><div class="r"></div>'+
+    '<div class="r">'+(vSum>0?pct(cSum/vSum*100,2):'')+'</div>'+
+    '<div class="r">'+(cartS>0?pct(cartW/cartS):'')+'</div>'+
     '<div class="r">'+(gm!=null?tlSpan(gm,mLight(gm),'%'):'')+'</div>'+
     '<div class="r" style="white-space:nowrap">'+(gpc!=null?capsPair(gpc,gac):'')+'</div>'+
     '<div></div></div>';
@@ -1143,9 +1165,39 @@ function rowHTML(c){
     '</div>'+(exp?detailHTML(key):'');
 }
 
+function insightsHTML(c){
+  var chips=[];
+  if(c.spend>0)chips.push('Расход '+fmtMoney(c.spend));
+  if(c.revenue>0&&c.drr!=null)chips.push('ДРР '+pct(c.drr));
+  if(c.views>0)chips.push('Показы '+fmtNum(c.views));
+  if(c.ctr!=null&&c.views>0)chips.push('CTR '+pct(c.ctr,2));
+  if(c.cpc!=null&&c.cpc>0)chips.push('CPC '+fmtMoney(c.cpc));
+  if(c.clicks>0)chips.push('Клики '+fmtNum(c.clicks));
+  if(c.clicks>0&&c.cart!=null)chips.push('Корзина '+pct(c.cart));
+  if(c.orders>0)chips.push('Заказы '+fmtNum(c.orders));
+  if(c.revenue>0)chips.push('Выручка '+fmtMoney(c.revenue));
+  var chipHtml=chips.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 8px">'+chips.map(function(x){return '<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(168,93,54,.10);color:#5a2f16;white-space:nowrap">'+esc(x)+'</span>';}).join('')+'</div>':'';
+  var flags=[];
+  if(c.spend>0&&!(c.orders>0))flags.push('Расход без заказов — реклама тратится ('+fmtMoney(c.spend)+'), продаж нет.');
+  if(c.clicks>30&&c.cart!=null&&c.cart<3)flags.push('Клики есть, корзин мало ('+pct(c.cart)+') — трафик нерелевантный или карточка слабая.');
+  if(c.drr!=null&&c.drr>TL.rHigh)flags.push('Высокий ДРР ('+pct(c.drr)+') — реклама съедает маржу.');
+  if(c.views>1000&&c.clicks>0&&c.ctr!=null&&c.ctr<0.5)flags.push('Низкий CTR ('+pct(c.ctr,2)+') — слабая обложка/цена/нерелевантный показ.');
+  if(c.margin!=null&&c.margin<0)flags.push('Отрицательная маржа ('+pct(c.margin)+') — кампания продаёт в минус.');
+  if(c.pc!=null&&c.pc<TL.profitMin)flags.push('Прибыль на капсулу '+fmtCaps(c.pc)+' ₽ — ниже лимита '+TL.profitMin+' ₽.');
+  var flagHtml=flags.length?'<div class="cd-h" style="margin-top:6px;color:#a8452f">несоответствия</div>'+flags.map(function(f){return '<div class="cd-note" style="padding:2px 0;color:#9c4a32">⚠ '+esc(f)+'</div>';}).join(''):'';
+  var why=[];
+  if(c.views>0&&c.clicks>0)why.push('Воронка: показы <b>'+fmtNum(c.views)+'</b> → клики <b>'+fmtNum(c.clicks)+'</b> ('+pct(c.ctr,2)+')'+(c.orders>0?' → заказы <b>'+fmtNum(c.orders)+'</b>':'')+'.');
+  if(c.cpc!=null&&c.cpc>0)why.push('Цена клика (CPC): <b>'+fmtMoney(c.cpc)+'</b>'+(c.orders>0&&c.spend>0?' · стоимость заказа ~<b>'+fmtMoney(c.spend/c.orders)+'</b>':'')+'.');
+  if(c.action)why.push('Рекомендация: <b>'+esc(c.action)+'</b>');
+  var whyHtml=why.length?'<div class="cd-h" style="margin-top:6px">что в цифрах</div>'+why.map(function(w){return '<div class="cd-note" style="padding:2px 0">'+w+'</div>';}).join(''):'';
+  return (chipHtml||flagHtml||whyHtml)?'<div style="margin-bottom:10px">'+chipHtml+flagHtml+whyHtml+'</div>':'';
+}
+
 function detailHTML(key){
+  var c=null; for(var i=0;i<CAMPS.length;i++){ if(CAMPS[i].plat+':'+CAMPS[i].id===key){c=CAMPS[i];break;} }
+  var ins=c?insightsHTML(c):'';
   var g=GOODS[key]||[];
-  if(!g.length)return '<div class="camp-detail"><div class="cd-note">Товары кампании не выгружены — раскрой её в приватном АДС и повтори «⬆ Google».</div></div>';
+  if(!g.length)return '<div class="camp-detail">'+ins+'<div class="cd-note">Товары кампании не выгружены — раскрой её в приватном АДС и повтори «⬆ Google».</div></div>';
   function dual(per,tot){ if(!(per>0))return '—'; return '<b>'+fmtMoney(per)+'</b><div class="cd-tot">'+(tot>0?fmtMoney(tot)+' всего':'—')+'</div>'; }
   var rows=g.map(function(r){
     var o=num(r['заказы'])||0, m=num(r['маржа_%']), pc=num(r['приб_капс']), ac=num(r['рекл_капс']);
@@ -1165,7 +1217,7 @@ function detailHTML(key){
       '<td>'+(ac!=null?'<span class="tl tl-'+acLight(ac)+'">'+fmtCaps(ac)+' ₽</span>':'—')+'</td>'+
       '<td>'+esc(r['остаток']||'—')+'</td></tr>';
   }).join('');
-  return '<div class="camp-detail"><div class="cd-h">Товары кампании · юнит-экономика ('+g.length+')</div>'+
+  return '<div class="camp-detail">'+ins+'<div class="cd-h">Товары кампании · юнит-экономика ('+g.length+')</div>'+
     '<div class="cd-scroll"><table class="cd-tbl"><thead><tr>'+
     '<th>Товар</th><th>Заказы</th><th>Выручка</th><th>Цена /ед</th><th>Себест /ед</th><th>Комис /ед</th><th>Логист /ед</th><th>Хранен /ед</th><th>Реклама /ед</th><th>Прибыль /ед</th><th>Маржа</th><th>Приб ₽/капс</th><th>Рекл ₽/капс</th><th>Остаток</th>'+
     '</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
