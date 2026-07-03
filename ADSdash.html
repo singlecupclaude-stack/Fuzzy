@@ -3399,7 +3399,17 @@
             _rw('Маржа',function(p){var pr=_pu(p,'pw'),mg=pr>0?_pu(p,'prw')/pr*100:0;return '<span class="tl '+(mg>=15?'tl-green':(mg>=0?'tl-yellow':'tl-red'))+'">'+pct(mg)+'</span>';})+
             _rw('ROMI (на ₽ рекл.)',function(p){var a=_pu(p,'aw'),gr=_pu(p,'prw')+a;return a>0?(Math.round(gr/a*100)/100)+'×':'—';})+
             '</table>'+
-            '<p class="cfg-hint" style="margin-top:10px">Тот же товар (по штрихкоду) в разных кабинетах. Прибыль до рекл. = цена − себест − комиссия − логистика − хранение; чистая = после рекламы; ROMI = валовая прибыль ÷ расход рекламы.</p>';
+            '<p class="cfg-hint" style="margin-top:10px">Тот же товар (по штрихкоду) в разных кабинетах. Прибыль до рекл. = цена − себест − комиссия − логистика − хранение; чистая = после рекламы; ROMI = валовая прибыль ÷ расход рекламы.</p>'+
+            '<div class="cd-h" style="margin-top:16px">Воронка продаж по кабинетам</div>'+
+            '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:13px">'+_hd+
+            _rw('Показы',function(p){return p.tv>0?fmtNum(p.tv):'—';})+
+            _rw('Добавления в корзину',function(p){return p.tc>0?fmtNum(p.tc):'—';})+
+            _rw('Заказано товаров',function(p){return p.o>0?fmtNum(p.o):'—';})+
+            _rw('Выручка',function(p){return p.rev>0?fmtMoney(p.rev):'—';})+
+            _rw('Конв. показ → заказ',function(p){return (p.tv>0&&p.o>0)?pct(p.o/p.tv*100):'—';})+
+            _rw('Конв. корзина → заказ',function(p){return (p.tc>0&&p.o>0)?pct(p.o/p.tc*100):'—';})+
+            '</table>'+
+            '<p class="cfg-hint" style="margin-top:8px">Показы/корзины по товару: Ozon — из Seller-аналитики (если приватный подтянул), WB — из рекламы; ЯМ отдаёт заказы/выручку.</p>';
         }
       }
       var _ec=(!_cabHtml&&_pr>0)?[['Цена за единицу','<b>'+fmtMoney(_pr)+'</b>'],['Прибыль за единицу',fmtMoney(_pf)],['Маржа','<span class="tl '+(_mg>=15?'tl-green':(_mg>=0?'tl-yellow':'tl-red'))+'">'+pct(_mg)+'</span>'],(base.stock!=null&&base.stock!==''?['Остаток',fmtNum(+base.stock||0)]:null)]:[];
@@ -4878,9 +4888,9 @@
         ag.items.forEach(function(it){
           var bc=String(it.bc||'').trim(); if(!bc)return;
           var rec=(PUB_ECON[bc]=PUB_ECON[bc]||{});
-          var p=(rec[cc.platform]=rec[cc.platform]||{o:0,rev:0,pw:0,cw:0,cmw:0,lw:0,sw:0,aw:0,prw:0,_w:0,name:it.name,stock:it.stock});
+          var p=(rec[cc.platform]=rec[cc.platform]||{o:0,rev:0,tv:0,tc:0,pw:0,cw:0,cmw:0,lw:0,sw:0,aw:0,prw:0,_w:0,name:it.name,stock:it.stock});
           var o=it.orders||0, w=o>0?o:1;
-          p.o+=o; p.rev+=it.revenue||0; p._w+=w;
+          p.o+=o; p.rev+=it.revenue||0; p.tv+=it.views||0; p.tc+=it.cart||0; p._w+=w;
           p.pw+=(it.price||0)*w; p.cw+=(it.cost||0)*w; p.cmw+=(it.comm||0)*w; p.lw+=(it.logi||0)*w; p.sw+=(it.store||0)*w; p.aw+=(it.ads||0)*w; p.prw+=(it.profit||0)*w;
           if(it.stock!=null&&it.stock!=='')p.stock=it.stock;
         });
