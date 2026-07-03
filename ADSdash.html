@@ -3386,9 +3386,17 @@
           function _mm(v){ return fmtMoney(Math.round(v)); }
           function _rw(label,fn){ return '<tr><td style="padding:6px 10px;border-bottom:1px solid rgba(168,93,54,.12)">'+label+'</td>'+_cabs.map(function(k){var p=_rec[k];return '<td style="padding:6px 10px;border-bottom:1px solid rgba(168,93,54,.12);text-align:right">'+(p?fn(p):'—')+'</td>';}).join('')+'</tr>'; }
           var _hd='<tr><td></td>'+_cabs.map(function(k){return '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#8a5a33">'+_cn[k]+'</td>';}).join('')+'</tr>';
+          var _bestK=null,_bestM=-Infinity;
+          _have.forEach(function(k){var p=_rec[k],pr=_pu(p,'pw'),mg=pr>0?_pu(p,'prw')/pr*100:-9999;if(mg>_bestM){_bestM=mg;_bestK=k;}});
+          var _todo='';
+          if(_bestK)_todo+='<div class="cd-note" style="padding:3px 0">🟢 Выгоднее продавать на <b>'+_cn[_bestK]+'</b>: маржа '+pct(_bestM)+', чистая прибыль '+_mm(_pu(_rec[_bestK],'prw'))+'/ед.</div>';
+          var _pp=_rec[plat==='wb'?'wb':(plat==='ym'?'ym':'ozon')];
+          if(_pp&&_pp.tv>0&&_pp.o>0&&(_pp.o/_pp.tv*100)<1)_todo+='<div class="cd-note" style="padding:3px 0">📉 '+_plName+': низкая конверсия показ→заказ ('+pct(_pp.o/_pp.tv*100)+') — слабая выдача/обложка/цена или нерелевантный трафик.</div>';
+          var _todoHtml=_todo?('<div class="cd-h" style="margin-top:16px">Что делать</div>'+_todo):'';
           _cabHtml='<div class="cd-h" style="margin-top:16px">Юнит-экономика по кабинетам (за единицу)</div>'+
             '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:13px">'+_hd+
             _rw('Цена',function(p){return _mm(_pu(p,'pw'));})+
+            _rw('Средний чек',function(p){return p.o>0?_mm(p.rev/p.o):'—';})+
             _rw('Себестоимость',function(p){return _mm(_pu(p,'cw'));})+
             _rw('Комиссия',function(p){return _mm(_pu(p,'cmw'));})+
             _rw('Логистика',function(p){return _mm(_pu(p,'lw'));})+
@@ -3400,6 +3408,7 @@
             _rw('ROMI (на ₽ рекл.)',function(p){var a=_pu(p,'aw'),gr=_pu(p,'prw')+a;return a>0?(Math.round(gr/a*100)/100)+'×':'—';})+
             '</table>'+
             '<p class="cfg-hint" style="margin-top:10px">Тот же товар (по штрихкоду) в разных кабинетах. Прибыль до рекл. = цена − себест − комиссия − логистика − хранение; чистая = после рекламы; ROMI = валовая прибыль ÷ расход рекламы.</p>'+
+            _todoHtml+
             '<div class="cd-h" style="margin-top:16px">Воронка продаж по кабинетам</div>'+
             '<table style="width:100%;border-collapse:collapse;margin-top:6px;font-size:13px">'+_hd+
             _rw('Показы',function(p){return p.tv>0?fmtNum(p.tv):'—';})+
