@@ -3362,11 +3362,12 @@
   async function openOzFunnel(sku, offer, name, base, plat) {
     base = base || {}; plat = plat || 'ozon';
     $('modalBody').innerHTML = '<div class="modal-kicker">воронка · ' + (plat === 'wb' ? 'WB' : plat === 'ym' ? 'ЯМ' : 'Ozon') + '</div><h2>' + esc(name || (sku)) + '</h2>' +
-      '<p class="modal-sub">' + (plat === 'ozon' ? 'Гружу данные из Seller-аналитики…' : 'Считаю по данным кампании…') + '</p>';
+      '<p class="modal-sub">' + ((typeof PUBLIC_MODE !== 'undefined' && PUBLIC_MODE) ? 'по данным из Google-таблицы' : (plat === 'ozon' ? 'Гружу данные из Seller-аналитики…' : 'Считаю по данным кампании…')) + '</p>';
     $('modal').style.display = 'flex';
-    var m = (plat === 'ozon') ? (await fetchOzFunnel(sku) || {}) : {};
-    // для WB/ЯМ воронку строим из данных позиции (показы/корзины/заказы), без Ozon-API
-    if (plat !== 'ozon') {
+    var _PUB = (typeof PUBLIC_MODE !== 'undefined' && PUBLIC_MODE);
+    var m = (plat === 'ozon' && !_PUB) ? (await fetchOzFunnel(sku) || {}) : {};
+    // для WB/ЯМ и публичной витрины воронку строим из данных позиции (показы/корзины/заказы), без Ozon-API
+    if (plat !== 'ozon' || _PUB) {
       m.hits_view = base.views || null; m.hits_tocart = base.cart || null;
       m.ordered_units = base.orders || null; m.revenue = base.revenue || null;
     }
@@ -4793,11 +4794,12 @@
       if(mn('лимит_приб_капс')!=null){ TL_CAPS.profitMin=mn('лимит_приб_капс'); TL_CAPS.adsMax=mn('лимит_рекл_капс')!=null?mn('лимит_рекл_капс'):TL_CAPS.adsMax; try{renderCapsLegend();}catch(e){} }
       var pd=parseInt(meta['период_дней'])||STATE.period||7; STATE.period=pd;
       var goods={};
-      res[1].forEach(function(o){ var k=o['площадка']+':'+o['кампания_id']; (goods[k]=goods[k]||[]).push(o); });
+      function _cidOf(idv,nm){ return (idv!=null&&String(idv).trim()!=='')?String(idv):('nm-'+String(nm||'').replace(/\s+/g,' ').trim().slice(0,60)); }
+      res[1].forEach(function(o){ var k=o['площадка']+':'+_cidOf(o['кампания_id'],o['товар']); (goods[k]=goods[k]||[]).push(o); });
       var N=pubNum;
       var all=res[0].filter(function(o){return o&&o['название'];}).map(function(o){
         var sp=N(o['расход'])||0, rv=N(o['выручка'])||0;
-        var c={ id:String(o['id']), platform:o['площадка'], cabinet:o['кабинет']||'', name:o['название'],
+        var c={ id:_cidOf(o['id'],o['название']), platform:o['площадка'], cabinet:o['кабинет']||'', name:o['название'],
           typeLabel:o['тип']||'', statusLabel:o['статус']||'', active:/актив/i.test(o['статус']||''),
           spend:sp, revenue:rv, views:N(o['показы'])||0, clicks:N(o['клики'])||0,
           orders:N(o['заказы'])||0, cpc:N(o['cpc'])||0, atbs:0, hasSpend:sp>0, noStats:false };
