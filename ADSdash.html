@@ -1143,6 +1143,12 @@
               <span class="tl-err" id="capsErr"></span>
             </span>
             <button class="tl-edit" id="adsExportBtn" type="button" title="Выгрузить цифры в Google-таблицу (для публичного АДС)">⬆ Google</button>
+            <span style="margin-left:12px;display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px">
+              <b style="color:var(--muted,#8a7a63)">Кабинеты →</b>
+              <a href="https://seller.ozon.ru/app/advertisement/product/cpc" target="_blank" rel="noopener" class="tl-edit" style="text-decoration:none" title="Ozon — все кампании (оплата за клик), списком">Ozon: кампании</a>
+              <a href="https://seller.ozon.ru/app/advertisement/product/cpo/selected" target="_blank" rel="noopener" class="tl-edit" style="text-decoration:none" title="Ozon — оплата за заказ (товарное продвижение)">Ozon: за заказ</a>
+              <a href="https://cmp.wildberries.ru/campaigns/list" target="_blank" rel="noopener" class="tl-edit" style="text-decoration:none" title="WB — все кампании, списком">WB: кампании</a>
+            </span>
             <span class="caps-prog" id="capsProgress"><i class="sp"></i><span>юнит-экономика…</span></span>
           </div>
           <div class="camp-wrap">
@@ -1571,8 +1577,8 @@
     return '<span class="tl tl-' + l + '" title="' + t + '">' + fmtCaps(v) + ' ₽</span>';
   }
   function capsPairHTML(pc, ac) {
-    var a = (pc != null && isFinite(pc)) ? '<span class="tl tl-' + capsProfitLight(pc) + '" title="прибыль ₽/капс (лимит ≥ ' + TL_CAPS.profitMin + ')">' + fmtCaps(pc) + '</span>' : '—';
-    var b = (ac != null && isFinite(ac)) ? '<span class="tl tl-' + capsAdsLight(ac) + '" title="реклама ₽/капс (лимит ≤ ' + TL_CAPS.adsMax + ')">' + fmtCaps(ac) + '</span>' : '—';
+    var a = (pc != null && isFinite(pc)) ? '<span class="tl tl-' + capsProfitLight(pc) + '" title="прибыль ₽/капс — чистая прибыль с 1 капсулы, уже за вычетом рекламы (лимит ≥ ' + TL_CAPS.profitMin + ' ₽)">' + fmtCaps(pc) + '</span>' : '—';
+    var b = (ac != null && isFinite(ac)) ? '<span class="tl tl-' + capsAdsLight(ac) + '" title="реклама ₽/капс — расходы на рекламу в пересчёте на 1 капсулу (лимит ≤ ' + TL_CAPS.adsMax + ' ₽)">' + fmtCaps(ac) + '</span>' : '—';
     return a + '<span style="color:var(--muted)">/</span>' + b;
   }
   // Агрегат по кампании: считается при загрузке детализации (юнит-экономики).
@@ -2168,17 +2174,25 @@
     var campaigns = list.map(function (c) {
       var a = statById[String(c.id)] || { spend: 0, views: 0, clicks: 0, orders: 0, revenue: 0 };
       var stateRaw = String(c.state || c.status || '');
+      // CPO / «оплата за заказ» (продвижение в поиске): распознаём по модели оплаты и типу.
+      var payRaw = String(c.paymentType || c.productCampaignMode || c.productAdvType || '');
+      var typeRaw = String(c.advObjectType || c.placement || '');
+      var isCpo = /CPO|PER_ORDER|ЗАКАЗ|SEARCH_PROMO|PROMO/i.test(payRaw + ' ' + typeRaw);
+      // CPO платит за заказ: расход = заказы × ставка. Если daily не отдал spend, но заказы есть — берём moneySpent/выручку из строки.
+      var cpoSpend = isCpo ? (a.spend || 0) : a.spend;
       return buildCampaign({
         platform: 'ozon', id: c.id,
         name: c.title || ('РК ' + c.id),
         statusLabel: ozStateLabel(stateRaw),
         active: /RUNNING|ACTIVE/i.test(stateRaw),
-        typeLabel: ozTypeLabel(c.advObjectType || c.placement || ''),
-        spend: a.spend, revenue: a.revenue, views: a.views, clicks: a.clicks,
+        typeLabel: isCpo ? 'оплата за заказ' : ozTypeLabel(typeRaw),
+        cpo: isCpo,
+        spend: cpoSpend, revenue: a.revenue, views: a.views, clicks: a.clicks,
         atbs: null, orders: a.orders,
         ctr: a.views > 0 ? a.clicks / a.views * 100 : 0,
-        cpc: a.clicks > 0 ? a.spend / a.clicks : 0,
-        hasSpend: a.spend > 0,
+        cpc: a.clicks > 0 ? cpoSpend / a.clicks : 0,
+        cpo_rate: (isCpo && a.orders > 0) ? cpoSpend / a.orders : 0,
+        hasSpend: cpoSpend > 0,
         noStats: !statsOk
       });
     });
@@ -2235,6 +2249,7 @@
     return s || '—';
   }
   function ozTypeLabel(t) {
+    if (/CPO|PER_ORDER|SEARCH_PROMO|PROMO/i.test(t)) return 'оплата за заказ';
     if (/SKU|PRODUCT/i.test(t)) return 'трафареты';
     if (/SEARCH/i.test(t)) return 'поиск';
     if (/BANNER/i.test(t)) return 'баннер';
@@ -2818,6 +2833,21 @@
     set('fl-orders', 'fv-orders', orders);
   }
 
+  // Ссылка на кампанию в рекламном кабинете: Ozon (оплата за клик) и WB
+  function campAdUrl(c) {
+    if (!c || c.id == null || c.id === '') return '';
+    var id = encodeURIComponent(String(c.id));
+    if (c.platform === 'ozon') return c.cpo
+      ? 'https://seller.ozon.ru/app/advertisement/product/cpo/selected'
+      : 'https://seller.ozon.ru/app/advertisement/product/cpc/' + id;
+    if (c.platform === 'wb') return 'https://cmp.wildberries.ru/campaigns/edit/' + id + '?advertID=' + id;
+    return '';
+  }
+  function campAdLink(c) {
+    var u = campAdUrl(c); if (!u) return '';
+    var mp = c.platform === 'ozon' ? 'Ozon' : 'WB';
+    return '<a href="' + u + '" target="_blank" rel="noopener" title="Открыть эту кампанию в кабинете ' + mp + '" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;flex-shrink:0;padding:3px 8px;border:1px solid var(--gold,#c9832b);border-radius:7px;color:var(--gold,#c9832b);text-decoration:none;font-size:11px;font-weight:700;white-space:nowrap">↗ ' + mp + '</a>';
+  }
   function rowHTML(c) {
     var isYM = c.platform === 'ym';
     var drrTxt = (c.noStats || c.spend === 0 || c.revenue === 0) ? '—' : (c.drr === Infinity ? '∞' : pct(c.drr));
@@ -2829,7 +2859,7 @@
     var key = c.platform + ':' + c.id;
     var exp = !!STATE.expanded[key];
     return '<div class="camp-row' + (exp ? ' exp' : '') + '" data-id="' + esc(c.id) + '" data-plat="' + c.platform + '" data-key="' + esc(key) + '">' +
-      '<div class="camp-name"><span class="rchev">' + (exp ? '▾' : '▸') + '</span><div class="cn"><strong>' + esc(c.name) + '</strong><span>' + esc(c.typeLabel) + ' · ' + esc(c.statusLabel) + '</span></div></div>' +
+      '<div class="camp-name"><span class="rchev">' + (exp ? '▾' : '▸') + '</span><div class="cn"><strong>' + esc(c.name) + '</strong><span>' + esc(c.typeLabel) + ' · ' + esc(c.statusLabel) + '</span></div>' + campAdLink(c) + '</div>' +
       '<div style="white-space:nowrap"><span class="pill ' + platPill(c.platform) + '">' + platLabel(c.platform) + '</span>' + (c.cabinet ? '<span class="cabbdg cab-' + (cabShort(c.cabinet)==="ИП"?'ip':'ooo') + '">' + esc(cabShort(c.cabinet)) + '</span>' : '') + '</div>' +
       '<div class="r">' + spendTxt + '</div>' +
       '<div class="r">' + drrCell + '</div>' +
