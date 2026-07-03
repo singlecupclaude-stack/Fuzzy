@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Разбор заказа — капсулы, упаковка, сырьё, стоимость</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1d2733; --muted:#6b7a8d;
+    --line:#e4e9f0; --brand:#2f6df6; --brand-d:#1f4fd0; --chip:#eef3ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;
+    box-shadow:0 1px 2px rgba(20,40,80,.04)}
+  .uploads{display:flex;gap:14px;flex-wrap:wrap}
+  .uploads>div{flex:1;min-width:280px}
+  #drop,#dropRef{border:2px dashed #b9c6da;border-radius:14px;padding:22px;text-align:center;
+    background:#fff;cursor:pointer;transition:.15s}
+  #dropRef{border-color:#cdd6e2}
+  #drop.hover,#dropRef.hover{border-color:var(--brand);background:#f2f7ff}
+  .big{font-size:16px;font-weight:600;margin-bottom:4px}
+  .hint{color:var(--muted);font-size:13px}
+  input[type=file]{display:none}
+  .btn{display:inline-block;background:var(--brand);color:#fff;border:0;border-radius:9px;
+    padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none}
+  .btn:hover{background:var(--brand-d)}
+  .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .btn.sm{padding:6px 12px;font-size:13px}
+  .refstatus{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .cards{display:flex;gap:12px;flex-wrap:wrap;margin:18px 0}
+  .kpi{flex:1;min-width:135px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px}
+  .kpi .n{font-size:23px;font-weight:700}
+  .kpi .l{color:var(--muted);font-size:12.5px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
+  .tab{padding:9px 13px;border-radius:10px 10px 0 0;background:transparent;border:1px solid transparent;
+    border-bottom:none;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--muted)}
+  .tab.active{background:var(--card);color:var(--ink);border-color:var(--line)}
+  .panelwrap{background:var(--card);border:1px solid var(--line);border-radius:0 14px 14px 14px;padding:18px}
+  .tip{background:var(--chip);border:1px solid #d7e3ff;border-radius:10px;padding:10px 13px;
+    font-size:13px;color:#33507f;margin-bottom:14px;display:flex;gap:8px}
+  .tip b{color:#1f3d78}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.02em;
+    cursor:pointer;user-select:none;white-space:nowrap}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#f8fafd}
+  tfoot td{font-weight:700;border-top:2px solid var(--line);border-bottom:none;background:#fbfcfe}
+  .q{font-weight:700}
+  .searchbar{margin-bottom:12px}
+  .searchbar input{width:100%;max-width:340px;padding:8px 12px;border:1px solid var(--line);
+    border-radius:9px;font-size:14px}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .warnbox{background:#fff6ed;border:1px solid #ffd9b0;color:#8a4b00;border-radius:10px;
+    padding:10px 13px;font-size:13px;margin-bottom:14px}
+  .empty{color:var(--muted);text-align:center;padding:40px 10px}
+  .muted{color:var(--muted)}
+  .note{color:var(--muted);font-size:12.5px;margin:-6px 0 12px}
+  /* pivot */
+  .pivotwrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
+  table.pivot{border-collapse:separate;border-spacing:0;min-width:100%}
+  table.pivot th,table.pivot td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);white-space:nowrap}
+  table.pivot thead th{position:sticky;top:0;background:#f2f5fa;z-index:2;font-size:11.5px;
+    max-width:120px;white-space:normal;vertical-align:bottom;line-height:1.2}
+  table.pivot th.firstcol,table.pivot td.firstcol{position:sticky;left:0;background:#fff;z-index:1;
+    min-width:210px;max-width:210px;white-space:normal;border-right:2px solid var(--line)}
+  table.pivot thead th.firstcol{z-index:3;background:#eef2f8}
+  table.pivot tfoot td{position:sticky;bottom:0;background:#eef4ff;font-weight:700;z-index:1}
+  table.pivot tfoot td.firstcol{z-index:3;background:#e3ecfc}
+  table.pivot td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .segbtns{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .segbtns button{border:0;background:#fff;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--muted)}
+  .segbtns button.on{background:var(--brand);color:#fff;font-weight:600}
+  .catchip{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  /* accordion */
+  table.acc{width:100%;border-collapse:collapse}
+  table.acc td,table.acc th{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.acc tbody .acc-h{cursor:pointer}
+  table.acc tbody .acc-h:hover{background:#f2f7ff}
+  table.acc .tgl{color:var(--brand);font-size:11px;text-align:center;user-select:none}
+  .acc-d>td{background:#f7f9fc;padding:0 10px 8px 10px!important}
+  table.dtl{width:100%;border-collapse:collapse;margin:4px 0 2px;background:#fff;
+    border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  table.dtl th{background:#f2f5fa;font-size:11px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+  table.dtl td,table.dtl th{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left}
+  table.dtl td.num,table.dtl th.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.dtl tfoot td{font-weight:700;background:#eef4ff;border-bottom:none}
+.kpi.money{min-width:160px}
+  .kpi.money .n{font-size:15px;white-space:nowrap}
+  table.acc thead th{cursor:pointer;white-space:nowrap}
+  th.sortable:hover,table.acc thead th:hover{color:var(--brand);background:#eef4ff}
+  th.sortable{transition:.12s}
+  tr.selectable{cursor:pointer}
+  tbody tr.selectable:hover{background:#eef4ff}
+  tbody tr.selectable.selected{background:#cfe0fb}
+  table.acc tbody .acc-h:hover{background:#eef4ff}
+  table.acc tbody .acc-h.open{background:#dfeafd}
+    footer{color:var(--muted);font-size:12px;text-align:center;margin-top:26px}
+  @media(max-width:640px){.tab{flex:1;text-align:center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📦 Разбор заказа на материалы и стоимость</h1>
+  <p class="sub">Загрузите «Общую сборку» — дашборд разложит заказ на капсулы, упаковку, сырьё и посчитает себестоимость.</p>
+
+  <div class="uploads">
+    <div>
+      <div id="drop" class="card">
+        <div class="big">1. Заказ — «Общая сборка» (.xlsx)</div>
+        <div class="hint">перетащите файл сюда или нажмите</div>
+        <input type="file" id="file" accept=".xlsx,.xls">
+      </div>
+    </div>
+    <div>
+      <div id="dropRef" class="card">
+        <div class="big">2. Обновить справочник — «Себестоимость» (.xlsx)</div>
+        <div class="hint">необязательно · перетащите, чтобы обновить состав и цены</div>
+        <input type="file" id="fileRef" accept=".xlsx,.xls">
+      </div>
+      <div class="refstatus" id="refStatus"></div>
+    </div>
+  </div>
+
+  <div id="result" style="display:none">
+    <div class="cards" id="kpis"></div>
+
+    <div class="toolbar">
+      <div id="orderTitle" class="muted"></div>
+      <div>
+        <button class="btn ghost sm" id="btnExport">⬇ Скачать сводку в Excel</button>
+        <button class="btn ghost sm" id="btnReset">Другой заказ</button>
+      </div>
+    </div>
+
+    <div id="unknownBox"></div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="panelwrap" id="panels"></div>
+  </div>
+
+  <footer>Состав и цены берутся из «Себестоимости». Всего капсул считается по столбцу «кол-во капсул» из заказа; виды капсул распределяются по рецептуре.</footer>
+</div>
+
+<script>
+let DATA = {"products":{"00-00004341":{"name":"Кофе в капсулах Nespresso формат \"Aroma Coffee\" 50 шт. Single Cup Coffee","pn":539.752028,"pv":658.49747416,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"capsule","n":"Карамель капсула РУ","q":10},{"c":"capsule","n":"Ванила капсула РУ","q":10},{"c":"capsule","n":"Шоколад капсула РУ","q":10},{"c":"capsule","n":"Миндаль капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":5},{"c":"packaging","n":"Шоу бокс Aroma 50 к","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006631":{"name":"Кофе в капсулах Dolce Gusto формат \"Cafe Au Lait\" 48 шт. Single Cup Coffee","pn":750.2996799999999,"pv":915.3656095999999,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":48},{"c":"packaging","n":"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":3},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007408":{"name":"Кофе в капсулах Nespresso формат \"Aroma Coffee\" 100 шт. Single Cup Coffee","pn":1049.304056,"pv":1280.15094832,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":20},{"c":"capsule","n":"Карамель капсула РУ","q":20},{"c":"capsule","n":"Ванила капсула РУ","q":20},{"c":"capsule","n":"Шоколад капсула РУ","q":20},{"c":"capsule","n":"Миндаль капсула РУ","q":20},{"c":"packaging","n":"Коробка белая","q":10},{"c":"packaging","n":"Шоубокс 100 кофе Арома","q":1},{"c":"packaging","n":"Кружочки","q":3}]},"00-00003615":{"name":"Кофе в капсулах Dolce Gusto формат \"Cappuccino\" 48 шт. Single Cup Coffee","pn":663.4891000000001,"pv":809.4567020000002,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":24},{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"packaging","n":"Шоу бокс Dolche Gusto Cappuccino 48 капсул","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 16 кап","q":3},{"c":"packaging","n":"Кружочки","q":3}]},"00-00006620":{"name":"Кофе в капсулах Dolce Gusto формат \"Cafe Au Lait\" 30 шт. Single Cup Coffee","pn":471.7598,"pv":575.546956,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":30},{"c":"packaging","n":"Коробка Dolce Gusto Cafe Au Lait 30 капсул","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 10 капсул","q":3},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007409":{"name":"Кофе в капсулах Nespresso формат \"Classic Coffee\" 100 шт. Single Cup Coffee","pn":1082.62415608,"pv":1320.8014704175998,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":20},{"c":"capsule","n":"Ристретто капсула РУ","q":20},{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":20},{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":20},{"c":"capsule","n":"Эспрессо № 7 капсула РУ","q":20},{"c":"packaging","n":"Коробка белая","q":10},{"c":"packaging","n":"Шоубокс 100 кофе Классик","q":1},{"c":"packaging","n":"Кружочки","q":3}]},"00-00003871":{"name":"Горячий шоколад капсулы Dolce Gusto формат \"Hot Chocolate\" 16 шт. Single Cup Coffee","pn":217.67748,"pv":265.5665256,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":8},{"c":"capsule","n":"Горячий шоколад капсула DG","q":8},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00007553":{"name":"Кофе в капсулах Dolce Gusto формат \"Cafe Au Lait\" 96 шт. Single Cup Coffee","pn":1401.4793599999998,"pv":1709.8048191999997,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":96},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":6},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Кружочки","q":12}]},"00-00007729":{"name":"Кофе в капсулах кофе с молоком Dolce Gusto формата \"Pari\" 96 шт. Single Cup Coffee","pn":1422.4548736000004,"pv":1735.3949457920005,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":48},{"c":"capsule","n":"Cafe au lait DG айриш крим капсула","q":16},{"c":"capsule","n":"Cafe au lait DG ваниль капсула","q":16},{"c":"capsule","n":"Cafe au lait DG карамель капсула","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":3},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель","q":1},{"c":"packaging","n":"Кружочки","q":12}]},"00-00003066":{"name":"Кофе в капсулах Nespresso формат \"Карамель, Ваниль, Шоколад\" 30 шт. Single Cup Coffee","pn":323.88459650000004,"pv":395.13920773000007,"comp":[{"c":"capsule","n":"Карамель капсула РУ","q":10},{"c":"capsule","n":"Ванила капсула РУ","q":10},{"c":"capsule","n":"Шоколад капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Шоу бокс Caramel, Vanilla, Chocolate 30 к","q":1},{"c":"packaging","n":"Кружочки","q":4}]},"00-00003614":{"name":"Кофе в капсулах Dolce Gusto формат \"Americano\" 48 шт. Single Cup Coffee","pn":736.310704,"pv":898.29905888,"comp":[{"c":"capsule","n":"Американо капсула DG","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":3},{"c":"packaging","n":"Шоу бокс Dolche Gusto Americano 48 кап","q":1},{"c":"packaging","n":"Кружочки","q":3}]},"00-00004342":{"name":"Кофе в капсулах Nespresso формат \"Classic Coffee\" 50 шт. Single Cup Coffee","pn":551.19207804,"pv":672.4543352087999,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"capsule","n":"Ристретто капсула РУ","q":10},{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":10},{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"capsule","n":"Эспрессо № 7 капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":5},{"c":"packaging","n":"Шоу бокс Classic 50 к","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007728":{"name":"Кофе капсулы Dolce Gusto формата 96 шт. \"MIX\" Single Cup Coffee","pn":1334.832184,"pv":1628.49526448,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":16},{"c":"capsule","n":"Уганда к молоку капсула DG","q":16},{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"capsule","n":"Горячий шоколад капсула DG","q":8},{"c":"capsule","n":"Американо капсула DG","q":16},{"c":"capsule","n":"Американо Стронг капсула DG","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 16 кап","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":1},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Latte Machiatto 16 кап","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano Strong 16","q":1},{"c":"packaging","n":"Кружочки","q":12}]},"00-00004250":{"name":"Горячий шоколад в капсулах Cioccolato формата Dolce Gusto от Single Cup Coffee (16 шт.)","pn":243.38000000000002,"pv":296.9236,"comp":[{"c":"capsule","n":"Горячий шоколад капсула DG","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cioccolato 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00007554":{"name":"Капсулы для кофемашины Dolce Gusto формата \"Americano Duo\" 96 шт. Single Cup Coffee","pn":1422.316232,"pv":1735.2258030399998,"comp":[{"c":"capsule","n":"Американо капсула DG","q":48},{"c":"capsule","n":"Американо Стронг капсула DG","q":48},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":3},{"c":"packaging","n":"Коробка Dolche Gusto Americano Strong 16","q":3},{"c":"packaging","n":"Кружочки","q":12}]},"00-00006632":{"name":"Кофе в капсулах Dolce Gusto формат \"Cafe Au Lait\" 16 шт. Single Cup Coffee","pn":230.78656,"pv":281.5596032,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007725":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE \"Trio\" DG 96 капсул","pn":1417.8868336,"pv":1729.821936992,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":32},{"c":"capsule","n":"Молоко капсула DG","q":59},{"c":"capsule","n":"Горячий шоколад капсула DG","q":20},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 16 кап","q":2},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":2},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Latte Machiatto 16 кап","q":2},{"c":"packaging","n":"Кружочки","q":12}]},"00-00007727":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE \"Pleasure\" DG 96 капсул","pn":1522.0914559999999,"pv":1856.9515763199997,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":32},{"c":"capsule","n":"Горячий шоколад капсула DG","q":39},{"c":"capsule","n":"Американо капсула DG","q":32},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":2},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":2},{"c":"packaging","n":"Коробка Dolche Gusto Cioccolato 16 кап","q":2},{"c":"packaging","n":"Кружочки","q":12}]},"00-00007552":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE \"Americano\" DG, 96 капсул","pn":1396.001408,"pv":1703.1217177600001,"comp":[{"c":"capsule","n":"Американо капсула DG","q":96},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":6},{"c":"packaging","n":"Кружочки","q":12}]},"00-00008409":{"name":"BRAZIL+TANZANIA дрип 40 шт.","pn":887.6999999999999,"pv":1082.994,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Бразилия ДРИП 10,5 г","q":null},{"c":"other","n":"Танзания ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип TANZANIA 25 шт.","q":1},{"c":"packaging","n":"Коробка дрип BRAZIL 25 шт.","q":1},{"c":"packaging","n":"Гофрокороб 220х170х130 (под дрипы)","q":1}]},"00-00008408":{"name":"COLOMBIA+TANZANIA дрип 40 шт.","pn":887.6999999999999,"pv":1082.994,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Колумбия ДРИП 10,5 г","q":null},{"c":"other","n":"Танзания ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип TANZANIA 25 шт.","q":1},{"c":"packaging","n":"Коробка дрип COLOMBIA 25 шт.","q":1},{"c":"packaging","n":"Гофрокороб 220х170х130 (под дрипы)","q":1}]},"00-00008407":{"name":"BRAZIL+COLOMBIA дрип 40 шт.","pn":893.9,"pv":1090.558,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Бразилия ДРИП 10,5 г","q":null},{"c":"other","n":"Колумбия ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип BRAZIL 25 шт.","q":1},{"c":"packaging","n":"Коробка дрип COLOMBIA 25 шт.","q":1},{"c":"packaging","n":"Гофрокороб 220х170х130 (под дрипы)","q":1}]},"00-00008500":{"name":"BRAZIL дрип 40 шт.","pn":872.35,"pv":1064.267,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Бразилия ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип BRAZIL 25 шт.","q":1},{"c":"packaging","n":"Гофрокороб 220х170х130 (под дрипы)","q":1}]},"00-00008317":{"name":"TANZANIA дрип 20 шт.","pn":436.83,"pv":532.9326,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Танзания ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип TANZANIA 25 шт.","q":1}]},"00-00008316":{"name":"COLOMBIA дрип 20 шт.","pn":443.03000000000003,"pv":540.4966000000001,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"other","n":"Колумбия ДРИП 10,5 г","q":null},{"c":"packaging","n":"Коробка дрип COLOMBIA 25 шт.","q":1}]},"00-00008411":{"name":"Кофе в капсулах Dolce Gusto формата \"Americano Strong\", 96 шт. Single Cup Coffee","pn":1448.6310560000002,"pv":1767.3298883200002,"comp":[{"c":"capsule","n":"Американо Стронг капсула DG","q":96},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Americano Strong 16","q":6},{"c":"packaging","n":"Кружочки","q":12}]},"00-00003611":{"name":"Кофе в капсулах Dolce Gusto формат \"AMERICANO\" 48 шт. HOME BARISTA","pn":680.570704,"pv":830.29625888,"comp":[{"c":"capsule","n":"Американо капсула DG","q":48},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс DG HB Americano 48 кап + вкладыш","q":1}]},"00-00002673":{"name":"Кофе в капсулах Nespresso формат \"ITALIANO\" 60 шт. HOME BARISTA","pn":658.3772180000001,"pv":803.22020596,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":20},{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":20},{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":20},{"c":"packaging","n":"Коробка белая","q":6},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Italiano HB","q":1}]},"00-00002674":{"name":"Кофе в капсулах Nespresso формат \"AROMA\" 60 шт. HOME BARISTA","pn":638.746557,"pv":779.2707995400001,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":20},{"c":"capsule","n":"Карамель капсула РУ","q":20},{"c":"capsule","n":"Ванила капсула РУ","q":20},{"c":"packaging","n":"Коробка белая","q":6},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Aroma HB","q":1}]},"00-00003060":{"name":"Кофе в капсулах Nespresso формат \"Extra Strong\" 30 шт. Single Cup Coffee","pn":333.59236400000003,"pv":406.98268408,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":30},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс 30 Extra Strong","q":1}]},"00-00002675":{"name":"Кофе в капсулах Nespresso формат \"SCANDINAVIA\" 60 шт. HOME BARISTA","pn":627.8584926,"pv":765.9873609719999,"comp":[{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":20},{"c":"capsule","n":"Колумбия Супремо капсула (Balance) РУ","q":20},{"c":"capsule","n":"Уганда СО капсула РУ","q":20},{"c":"packaging","n":"Коробка белая","q":6},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Scandinavia HB","q":1}]},"00-00003612":{"name":"Кофе в капсулах Dolce Gusto формат \"CAPPUCCINO\" 48 шт. HOME BARISTA","pn":596.3791000000001,"pv":727.5825020000001,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":24},{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс DG HB Cappuccino 48 кап + вкладыш","q":1}]},"00-00003483":{"name":"Кофе в капсулах Nespresso формат \"CHOCO & NUTS\" 60 шт. HOME BARISTA","pn":624.656979,"pv":762.0815143799999,"comp":[{"c":"capsule","n":"Шоколад капсула РУ","q":20},{"c":"capsule","n":"Миндаль капсула РУ","q":20},{"c":"capsule","n":"Кокос капсула РУ","q":20},{"c":"packaging","n":"Коробка белая","q":6},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Choco&Nuts HB","q":1}]},"00-00003616":{"name":"Набор кофе в капсулах LATTE MACCHIATO для кофемашин Dolce Gusto от Single Cup Coffee (48 шт.)","pn":655.5391000000001,"pv":799.7577020000001,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":24},{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"packaging","n":"Шоу бокс Dolche Gusto Latte Machiatto 48 кап","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Latte Machiatto 16 кап","q":3},{"c":"packaging","n":"Кружочки","q":3}]},"00-00003873":{"name":"Горячий шоколад в капсулах Hot Chocolate для кофемашин Dolce Gusto от Single Cup Coffee (48 шт.)","pn":691.4524399999999,"pv":843.5719767999999,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"capsule","n":"Горячий шоколад капсула DG","q":24},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":3},{"c":"packaging","n":"Кружочки","q":3},{"c":"packaging","n":"Шоу бокс Dolche Gusto Chocolate (48 капсул)","q":1}]},"00-00003857":{"name":"Кофе в капсулах для кофемашин Nespresso Original формат \"Амаретто, Вишня с коньяком, Ирландский крем\" 30 шт. Single Cup Coffee","pn":319.55588930000005,"pv":389.85818494600005,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"capsule","n":"Амаретто капсула РУ","q":10},{"c":"capsule","n":"Вишня с коньяком капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Шоу бокс 30 Amaretto, Irish cream, Cherry with cognac","q":1},{"c":"packaging","n":"Кружочки","q":4}]},"00-00003061":{"name":"Кофе в капсулах Nespresso формат \"Irish Cream\" 30 шт. Single Cup Coffee","pn":316.60653049999996,"pv":386.25996720999996,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":30},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Шоу бокс 30 Irish cream","q":1},{"c":"packaging","n":"Кружочки","q":4}]},"00-00004243":{"name":"Горячий шоколад капсулы Dolce Gusto формат \"Hot Chocolate\" 48 шт. HOME BARISTA","pn":637.52244,"pv":777.7773768,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"capsule","n":"Горячий шоколад капсула DG","q":24},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс DG HB Hot chocolate 48 кап + вкладыш","q":1}]},"00-00003067":{"name":"Набор кофе в капсулах Irish Cream, Миндаль, Кокос формата Nespresso от Single Cup Coffee (30 шт.)","pn":317.0271715,"pv":386.77314923,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"capsule","n":"Миндаль капсула РУ","q":10},{"c":"capsule","n":"Кокос капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Шоу бокс 30 Irish Cream, Mindal, Coconat","q":1},{"c":"packaging","n":"Кружочки","q":4}]},"00-00003559":{"name":"Кофе в капсулах Dolce Gusto формат \"Americano Strong\" 16 шт. Single Cup Coffee","pn":238.52517600000002,"pv":291.00071472,"comp":[{"c":"capsule","n":"Американо Стронг капсула DG","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Americano Strong 16","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00008410":{"name":"Горячий шоколад в капсулах \"Cioccolato\" формата Dolce Gusto, Single Cup Coffee 96 шт.","pn":1477.7600000000002,"pv":1802.8672000000001,"comp":[{"c":"capsule","n":"Горячий шоколад капсула DG","q":96},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Коробка Dolche Gusto Cioccolato 16 кап","q":6},{"c":"packaging","n":"Кружочки","q":12}]},"00-00008412":{"name":"Горячий шоколад капсулы Dolce Gusto формат \"Hot Chocolate\" 96 шт. Single Cup Coffee","pn":1322.82488,"pv":1613.8463536,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":48},{"c":"capsule","n":"Горячий шоколад капсула DG","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":6},{"c":"packaging","n":"Гофрокороб DG 96 390х250х130","q":1},{"c":"packaging","n":"Кружочки","q":6}]},"00-00007690":{"name":"Кофе в капсулах Nespresso формат \"Caffe Classico\" 100 шт. Caffe Gioia","pn":1139.5864483999997,"pv":1390.2954670479996,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":20},{"c":"capsule","n":"Ристретто капсула РУ","q":20},{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":20},{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":20},{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":20},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Roma Intenso Gioia","q":2},{"c":"packaging","n":"Коробка Palermo Extra Forte Gioia","q":2},{"c":"packaging","n":"Коробка Firenze Ristretto Gioia","q":2},{"c":"packaging","n":"Коробка Venezia Delicato Gioia","q":2},{"c":"packaging","n":"Коробка Milano Espresso Gioia","q":2},{"c":"packaging","n":"Коробка Gioia Classico набор 100","q":1}]},"00-00007688":{"name":"Кофе в капсулах Nespresso формат \"Caffe Classico\" 50 шт. Caffe Gioia","pn":572.7382241999999,"pv":698.7406335239998,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"capsule","n":"Ристретто капсула РУ","q":10},{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":10},{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":10},{"c":"packaging","n":"Кружочки","q":3},{"c":"packaging","n":"Коробка Roma Intenso Gioia","q":1},{"c":"packaging","n":"Коробка Palermo Extra Forte Gioia","q":1},{"c":"packaging","n":"Коробка Firenze Ristretto Gioia","q":1},{"c":"packaging","n":"Коробка Venezia Delicato Gioia","q":1},{"c":"packaging","n":"Коробка Milano Espresso Gioia","q":1},{"c":"packaging","n":"Коробка Gioia Classico набор 50","q":1}]},"00-00007689":{"name":"Кофе в капсулах Nespresso формат \"Caffe Aromatico\" 100 шт. Caffe Gioia","pn":1109.974056,"pv":1354.16834832,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":20},{"c":"capsule","n":"Карамель капсула РУ","q":20},{"c":"capsule","n":"Ванила капсула РУ","q":20},{"c":"capsule","n":"Шоколад капсула РУ","q":20},{"c":"capsule","n":"Миндаль капсула РУ","q":20},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Torino Caramel Gioia","q":2},{"c":"packaging","n":"Коробка Sanremo Irish Cream Gioia","q":2},{"c":"packaging","n":"Коробка Bergamo Chocolate Gioia","q":2},{"c":"packaging","n":"Коробка Verona Almond Gioia","q":2},{"c":"packaging","n":"Коробка Modena Vanilla Gioia","q":2},{"c":"packaging","n":"Коробка Gioia Aromatico набор 100","q":1}]},"00-00007687":{"name":"Кофе в капсулах Nespresso формат \"Caffe Aromatico\" 50 шт. Caffe Gioia","pn":557.9320280000001,"pv":680.6770741600001,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"capsule","n":"Карамель капсула РУ","q":10},{"c":"capsule","n":"Ванила капсула РУ","q":10},{"c":"capsule","n":"Шоколад капсула РУ","q":10},{"c":"capsule","n":"Миндаль капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":3},{"c":"packaging","n":"Коробка Torino Caramel Gioia","q":1},{"c":"packaging","n":"Коробка Sanremo Irish Cream Gioia","q":1},{"c":"packaging","n":"Коробка Bergamo Chocolate Gioia","q":1},{"c":"packaging","n":"Коробка Verona Almond Gioia","q":1},{"c":"packaging","n":"Коробка Modena Vanilla Gioia","q":1},{"c":"packaging","n":"Коробка Gioia Aromatico набор 50","q":1}]},"00-00003065":{"name":"Кофе в капсулах Nespresso формат \"Extra Strong, Intense, Ristretto\" 30 шт. Single Cup Coffee","pn":332.30122,"pv":405.4074884,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"capsule","n":"Ристретто капсула РУ","q":10},{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Шоу бокс 30 Extra Strong, Intense, Ristretto","q":1},{"c":"packaging","n":"Кружочки","q":4}]},"00-00003561":{"name":"Кофе в капсулах для кофемашин Dolce Gusto формат \"Latte macchiato\" 16 шт. Single Cup Coffee","pn":199.0397,"pv":242.82843400000002,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":8},{"c":"capsule","n":"Молоко капсула DG","q":8},{"c":"packaging","n":"Коробка Dolche Gusto Latte Machiatto 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00006535":{"name":"Кофе в капсулах Single Cup Coffee \"Cappuccino\" DG, 10 капсул","pn":131.3535625,"pv":160.25134625,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":5},{"c":"capsule","n":"Молоко капсула DG","q":5},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006531":{"name":"Кофе в капсулах Single Cup Coffee \"Americano\" DG, 10 капсул","pn":145.72348,"pv":177.7826456,"comp":[{"c":"capsule","n":"Американо капсула DG","q":10},{"c":"packaging","n":"Коробка Dolche Gusto Americano 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006533":{"name":"Кофе в капсулах Single Cup Coffee \"Americano Strong\" DG, 10 капсул","pn":153.335735,"pv":187.0695967,"comp":[{"c":"capsule","n":"Американо Стронг капсула DG","q":10},{"c":"packaging","n":"Коробка Dolche Gusto Americano Strong 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006543":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE  \"Cafe au lait\" DG, 10 капсул","pn":148.63660000000002,"pv":181.33665200000002,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":10},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006536":{"name":"Напиток растворимый в капсулах  SINGLE CUP COFFEE \"Cioccolato\" DG, 10 капсул","pn":157.41000000000003,"pv":192.04020000000003,"comp":[{"c":"capsule","n":"Горячий шоколад капсула DG","q":10},{"c":"packaging","n":"Коробка Dolche Gusto Сioccolato 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006534":{"name":"Кофе в капсулах Single Cup Coffee \"Latte macchiato\" DG, 10 капсул","pn":128.4835625,"pv":156.74994625,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":5},{"c":"capsule","n":"Молоко капсула DG","q":5},{"c":"packaging","n":"Коробка Dolche Gusto Latte 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006544":{"name":"Decaf DG 10 капсул","pn":180.09783144000002,"pv":219.7193543568,"comp":[{"c":"capsule","n":"Декаф капсула DG","q":10},{"c":"packaging","n":"Коробка Dolche Gusto Decaf 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006532":{"name":"Напиток растворимый в капсулах Single Cup Coffee \"Hot Chocolate\" DG, 10 капсул","pn":144.082175,"pv":175.78025350000001,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":5},{"c":"capsule","n":"Горячий шоколад капсула DG","q":5},{"c":"packaging","n":"Коробка Dolche Gusto Hot Сhocolate 10 капсул","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007684":{"name":"Кофе в капсулах Caffe Gioia \"Bergamo Chocolate\", 10 капсул","pn":106.1401615,"pv":129.49099703000002,"comp":[{"c":"capsule","n":"Шоколад капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Bergamo Chocolate\"","q":1}]},"00-00007680":{"name":"Кофе в капсулах Caffe Gioia \"Firenze Ristretto\", 10 капсул","pn":110.62204200000001,"pv":134.95889124,"comp":[{"c":"capsule","n":"Ристретто капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Firenze Ristretto\"","q":1}]},"00-00007676":{"name":"Кофе в капсулах Caffe Gioia \"Milano Espresso\", 10 капсул","pn":110.429431,"pv":134.72390582,"comp":[{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Milano Espresso\"","q":1}]},"00-00007681":{"name":"Кофе в капсулах Caffe Gioia \"Modena Vanilla\", 10 капсул","pn":108.69529150000002,"pv":132.60825563000003,"comp":[{"c":"capsule","n":"Ванила капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Modena Vanilla\"","q":1}]},"00-00007677":{"name":"Кофе в капсулах Caffe Gioia \"Palermo Extra Forte\", 10 капсул","pn":112.200788,"pv":136.88496136,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Palermo Extra Forte\"","q":1}]},"00-00007678":{"name":"Кофе в капсулах Caffe Gioia \"Roma Intenso\", 10 капсул","pn":111.56839,"pv":136.1134358,"comp":[{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Roma Intenso\"","q":1}]},"00-00007679":{"name":"Кофе в капсулах Caffe Gioia \"Sanremo Irish Cream\", 10 капсул","pn":106.06884349999999,"pv":129.40398906999997,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Sanremo Irish Cream\"","q":1}]},"00-00007683":{"name":"Кофе в капсулах Caffe Gioia \"Torino Caramel\", 10 капсул","pn":107.8691435,"pv":131.60035507,"comp":[{"c":"capsule","n":"Карамель капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Torino Caramel\"","q":1}]},"00-00007685":{"name":"Кофе в капсулах Caffe Gioia \"Venezia Delicato\", 10 капсул","pn":107.0275732,"pv":130.573639304,"comp":[{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Venezia Delicato\"","q":1}]},"00-00007682":{"name":"Кофе в капсулах Caffe Gioia \"Verona Almond\", 10 капсул","pn":104.898588,"pv":127.97627736,"comp":[{"c":"capsule","n":"Миндаль капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Gioia \"Verona Almond\"","q":1}]},"00-00003063":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE Caramel (30)","pn":323.00743050000005,"pv":394.0690652100001,"comp":[{"c":"capsule","n":"Карамель капсула РУ","q":30},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс 30 Caramel","q":1}]},"00-00003064":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE Mindal (30)","pn":314.28576400000003,"pv":383.42863208,"comp":[{"c":"capsule","n":"Миндаль капсула РУ","q":30},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс 30 Mindal","q":1}]},"00-00003062":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE Vanilla (30)","pn":325.6758745000001,"pv":397.3245668900001,"comp":[{"c":"capsule","n":"Ванила капсула РУ","q":30},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс 30 Vanilla","q":1}]},"00-00003068":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE  Delicate, Balance, Espresso 7 (30)","pn":319.92195014000004,"pv":390.30477917080003,"comp":[{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"capsule","n":"Эспрессо № 7 капсула РУ","q":10},{"c":"capsule","n":"Колумбия Супремо капсула (Balance) РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс 30 Delicate, Balance, Espresso 7","q":1}]},"00-00003558":{"name":"Кофе в капсулах SINGLE CUP COFFEE \"Americano\" DG 16 капсул","pn":229.753568,"pv":280.29935296,"comp":[{"c":"capsule","n":"Американо капсула DG","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Americano 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00003560":{"name":"Кофе в капсулах SINGLE CUP COFFEE \"Cappuccino\" DG 16 капсул","pn":201.68970000000002,"pv":246.06143400000002,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":8},{"c":"capsule","n":"Молоко капсула DG","q":8},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 16 кап","q":1},{"c":"packaging","n":"Кружочки","q":1}]},"00-00003613":{"name":"Кофе в капсулах HOME BARISTA \"Latte macchiato\" DG","pn":581.8491000000001,"pv":709.8559020000001,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":24},{"c":"capsule","n":"Молоко капсула DG","q":24},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс DG HB Latte Machiato 48 кап + вкладыш","q":1}]},"00-00003751":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE Cherry with cognac, Orange, Strawberry cream (30)","pn":321.77724140000004,"pv":392.56823450800005,"comp":[{"c":"capsule","n":"Апельсин капсула РУ","q":10},{"c":"capsule","n":"Клубника со сливками","q":10},{"c":"capsule","n":"Вишня с коньяком капсула РУ","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Шоу бокс Cherry with cognac, Orange, Strawberry cream (30)","q":1}]},"00-00006624":{"name":"Кофе в капсулах Single Cup Coffee \"Cappuccino\" DG, 30 капсул","pn":421.4906875000001,"pv":514.2186387500001,"comp":[{"c":"capsule","n":"Уганда к молоку капсула DG","q":15},{"c":"capsule","n":"Молоко капсула DG","q":15},{"c":"packaging","n":"Коробка Dolche Gusto Cappuccino 10 капсул","q":3},{"c":"packaging","n":"Кружочки","q":6},{"c":"packaging","n":"Коробка Cappuccino DG 30","q":1}]},"00-00006626":{"name":"Напиток растворимый в капсулах Single Cup Coffee \"Hot Chocolate\" DG, 30 капсул","pn":467.446525,"pv":570.2847605,"comp":[{"c":"capsule","n":"Молоко капсула DG","q":15},{"c":"capsule","n":"Горячий шоколад капсула DG","q":15},{"c":"packaging","n":"Коробка Dolche Gusto Hot Сhocolate 10 капсул","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Hot Сhocolate DG 30","q":1}]},"00-00006627":{"name":"Напиток растворимый в капсулах  SINGLE CUP COFFEE \"Cioccolato\" DG, 30 капсул","pn":507.43000000000006,"pv":619.0646,"comp":[{"c":"capsule","n":"Горячий шоколад капсула DG","q":30},{"c":"packaging","n":"Коробка Dolche Gusto Сioccolato 10 капсул","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Chiocolato DG 30","q":1}]},"00-00007560":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Vanilla\" DG, 48 капсул","pn":751.8095743999999,"pv":917.2076807679998,"comp":[{"c":"capsule","n":"Cafe au lait DG ваниль капсула","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Ваниль","q":1}]},"00-00007561":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Vanilla\" DG, 16 капсул","pn":237.9565248,"pv":290.306960256,"comp":[{"c":"capsule","n":"Cafe au lait DG ваниль капсула","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007562":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Irish cream\" DG, 48 капсул","pn":732.7504544,"pv":893.955554368,"comp":[{"c":"capsule","n":"Cafe au lait DG айриш крим капсула","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Айриш","q":1}]},"00-00007563":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Irish cream\" DG, 16 капсул","pn":231.60348480000005,"pv":282.55625145600004,"comp":[{"c":"capsule","n":"Cafe au lait DG айриш крим капсула","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00007564":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Caramel\" DG, 48 капсул","pn":769.265552,"pv":938.50397344,"comp":[{"c":"capsule","n":"Cafe au lait DG карамель капсула","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Карамель","q":1}]},"00-00007565":{"name":"Напиток растворимый в капсулах SINGLE CUP COFFEE \"Cafe au lait Caramel\" DG, 16 капсул","pn":243.77518400000002,"pv":297.40572448,"comp":[{"c":"capsule","n":"Cafe au lait DG карамель капсула","q":16},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель","q":1},{"c":"packaging","n":"Кружочки","q":2}]},"00-00006634":{"name":"Напиток растворимый в капсулах HOME BARISTA \"Cafe au lait\" DG, 48 капсул","pn":678.9796799999999,"pv":828.3552095999999,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":48},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс DG HB Caf? au lait 48 кап + вкладыш","q":1}]},"00-00007953":{"name":"Фруктовая основа для напитков Home Barista Mix Me Набор \"Фруктовый коктейль\", 5 саше","pn":214.98,"pv":262.2756,"comp":[{"c":"packaging","n":"Кружочки","q":4},{"c":"packaging","n":"Коробка Gioia \"Venezia Delicato\"","q":23}]},"00-00007730":{"name":"Набор кофе в капсулах SINGLE CUP COFFEE \"Bliss\" DG 96 капсул","pn":1400.92808,"pv":1709.1322575999998,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":32},{"c":"capsule","n":"Молоко капсула DG","q":16},{"c":"capsule","n":"Горячий шоколад капсула DG","q":48},{"c":"packaging","n":"Коробка Dolche Gusto Cafe Au Lait 16 кап","q":2},{"c":"packaging","n":"Коробка Dolche Gusto Hot Chocolate 16 кап","q":2},{"c":"packaging","n":"Коробка Dolche Gusto Cioccolato 16 кап","q":2},{"c":"packaging","n":"Кружочки","q":12},{"c":"packaging","n":"Гофрокороб 220х170х130 (под дрипы)","q":2}]},"00-00000262":{"name":"Light roast CJ Classic","pn":104.31953999999999,"pv":127.26983879999999,"comp":[{"c":"capsule","n":"Уганда СО капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Light roast CJ","q":1}]},"КП-00000220":{"name":"Strong CJ","pn":108.640788,"pv":132.54176136,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Strong CJ","q":1}]},"00-00000227":{"name":"Amaretto","pn":103.9779944,"pv":126.85315316799999,"comp":[{"c":"capsule","n":"Амаретто капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Amaretto SC","q":1}]},"00-00000110":{"name":"Balanced","pn":104.4821331,"pv":127.468202382,"comp":[{"c":"capsule","n":"Колумбия Супремо капсула (Balance) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Balanced SC","q":1}]},"00-00000111":{"name":"Caramel","pn":108.34914350000001,"pv":132.18595507,"comp":[{"c":"capsule","n":"Карамель капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Caramel SC","q":1}]},"КП-00000431":{"name":"Cherry with cognac","pn":102.1390514,"pv":124.609642708,"comp":[{"c":"capsule","n":"Вишня с коньяком капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Cherry cognac SC","q":1}]},"00-00000112":{"name":"Chocolate","pn":105.70016150000001,"pv":128.95419703000002,"comp":[{"c":"capsule","n":"Шоколад капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Chocolate SC","q":1}]},"КП-00000189":{"name":"Coconut","pn":105.14974,"pv":128.2826828,"comp":[{"c":"capsule","n":"Кокос капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Coconut SC","q":1}]},"00-00000206":{"name":"Espresso # 7","pn":107.48224384,"pv":131.1283374848,"comp":[{"c":"capsule","n":"Эспрессо № 7 капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Espresso 7 SC","q":1}]},"КП-00000219":{"name":"Extra Strong","pn":111.230788,"pv":135.70156136,"comp":[{"c":"capsule","n":"Экстра Стронг капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Extra Strong SC","q":1}]},"00-00000113":{"name":"Decaf","pn":126.76298168000002,"pv":154.65083764960002,"comp":[{"c":"capsule","n":"Декаф капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Decaf SC","q":1}]},"00-00003484":{"name":"Decaf Caramel","pn":132.56766887999999,"pv":161.7325560336,"comp":[{"c":"capsule","n":"Декаф Карамель капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Decaf Caramel SC","q":1}]},"00-00003485":{"name":"Decaf irish cream","pn":131.29617868,"pv":160.1813379896,"comp":[{"c":"capsule","n":"Декаф Айриш крим капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Decaf Irish Cream SC","q":1}]},"00-00000193":{"name":"Decaf Vanilla","pn":133.55758168000003,"pv":162.94024964960002,"comp":[{"c":"capsule","n":"Декаф Ваниль капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Decaf Vanilla SC","q":1}]},"00-00000114":{"name":"Delicate","pn":111.22757320000001,"pv":135.697639304,"comp":[{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Delicate SC","q":1}]},"00-00000115":{"name":"Intense","pn":115.76839,"pv":141.2374358,"comp":[{"c":"capsule","n":"Никарагуа капсула (Интенс) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Intense SC","q":1}]},"00-00000172":{"name":"Irish cream","pn":105.56884349999999,"pv":128.79398906999998,"comp":[{"c":"capsule","n":"Айриш крим капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Irish Cream SC","q":1}]},"00-00000116":{"name":"Mild","pn":105.1321331,"pv":128.261202382,"comp":[{"c":"capsule","n":"Колумбия Супремо капсула (Balance) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Mild SC","q":1}]},"00-00001691":{"name":"Шоколад  (100 капсул)","pn":1168.65117,"pv":1425.7544274000002,"comp":[{"c":"capsule","n":"Шоколад капсула Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001688":{"name":"Айриш крим (100 капсул)","pn":1163.8276250000001,"pv":1419.8697025000001,"comp":[{"c":"capsule","n":"Айриш крим капсула Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001129":{"name":"Колумбия Супремо (100 капсул)","pn":1142.26,"pv":1393.5572,"comp":[{"c":"capsule","n":"Колумбия супремо Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001689":{"name":"Декаф (100 капсул)","pn":1365.8200000000002,"pv":1666.3004,"comp":[{"c":"capsule","n":"Декаф капсула Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001126":{"name":"Интенсивность 5 (100 капсул)","pn":1413.88,"pv":1724.9336,"comp":[{"c":"capsule","n":"Мексика 5 капсула шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001124":{"name":"Интенсивность 9 (100 капсул)","pn":1413.88,"pv":1724.9336,"comp":[{"c":"capsule","n":"Мексика 9 капсула Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00001127":{"name":"Ваниль  (100 капсул)","pn":1167.3923800000002,"pv":1424.2187036000003,"comp":[{"c":"capsule","n":"Ванила капсула Шоко","q":100},{"c":"packaging","n":"Коробка под шоко 10х10","q":10},{"c":"packaging","n":"Коробка на 10 290х210х90 шоко","q":1},{"c":"packaging","n":"Кружочки","q":10}]},"00-00000118":{"name":"Vanilla","pn":110.34529150000003,"pv":134.62125563000004,"comp":[{"c":"capsule","n":"Ванила капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Vanilla SC","q":1}]},"00-00008924":{"name":"Flat White DG 16 капсул","pn":189.14717624000002,"pv":230.75955501280004,"comp":[{"c":"capsule","n":"Cafe au lait DG капсула 2в1","q":13},{"c":"packaging","n":"Кружочки","q":3},{"c":"packaging","n":"Коробка Dolche Gusto Flat White 16 кап","q":1}]},"00-00009201":{"name":"Corica, Apple strudel, Honey (30) Набор","pn":320.18584730000003,"pv":390.62673370600004,"comp":[{"c":"capsule","n":"Мед капсула","q":10},{"c":"capsule","n":"Корица капсула РУ","q":10},{"c":"capsule","n":"Яблочный штрудель","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс SC 30 к NS","q":1}]},"00-00009202":{"name":"Honduras, Mexica, Sumatra (30) Набор","pn":339.0723877,"pv":413.66831299399996,"comp":[{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":10},{"c":"capsule","n":"Гондурас капсула (Деликейт) РУ","q":10},{"c":"capsule","n":"Индонезия Суматра капсула","q":10},{"c":"packaging","n":"Коробка белая","q":3},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Шоу бокс SC 30 к NS","q":1}]},"00-00000117":{"name":"Strong","pn":114.629431,"pv":139.84790582,"comp":[{"c":"capsule","n":"Мексика капсула (Стронг) РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Stronge SC","q":1}]},"КП-00000190":{"name":"Orange","pn":105.04904539999998,"pv":128.15983538799998,"comp":[{"c":"capsule","n":"Апельсин капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Orange SC","q":1}]},"00-00000202":{"name":"Mindal","pn":104.458588,"pv":127.43947736,"comp":[{"c":"capsule","n":"Миндаль капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Mindal SC","q":1}]},"00-00000173":{"name":"Corica","pn":103.8989024,"pv":126.75666092799999,"comp":[{"c":"capsule","n":"Корица капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Corica SC","q":1}]},"00-00002873":{"name":"Ristretto","pn":109.37204200000001,"pv":133.43389124,"comp":[{"c":"capsule","n":"Ристретто капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Ristretto SC","q":1}]},"00-00000170":{"name":"Uganda","pn":102.95953999999999,"pv":125.61063879999999,"comp":[{"c":"capsule","n":"Уганда СО капсула РУ","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Ristretto SC","q":1}]},"00-00000256":{"name":"Apple strudel","pn":104.39510240000001,"pv":127.36202492800001,"comp":[{"c":"capsule","n":"Яблочный штрудель","q":10},{"c":"packaging","n":"Кружочки","q":2},{"c":"packaging","n":"Коробка Apple strudel SC","q":1}]}},"capbom":{"Айриш крим капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Айриш Крим T116925 Ароматизатор","aroma_cost":0.23293035000000004,"total":9.71588435},"Карамель капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Карамель сливочная Ароматизатор Т119794-1 (по 0,14)","aroma_cost":0.41296035000000003,"total":9.895914350000002},"Ванила капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Ваниль T116016-2 Ароматизатор","aroma_cost":0.52957515,"total":10.012529150000002},"Шоколад капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Шоколад Т115960 Ароматизатор","aroma_cost":0.27406215,"total":9.757016150000002},"Миндаль капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Миндаль горький Т117628-1 Ароматизатор ","aroma_cost":0.1499048,"total":9.632858800000001},"Cafe au lait DG капсула 2в1":{"bean":"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг","bean_cost":6.588,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":13.04666},"Уганда к молоку капсула DG":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":4.866817500000001,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":"26. Перфорированная пленка DG 250мм. Артпласт (расх 0,260)","film_cost":0.1248,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":11.450277500000002},"Молоко капсула DG":{"bean":"Сухое цельное молоко Армада","bean_cost":4.481805,"bean2":null,"bean2_cost":null,"foil":"21. Фольга PET12/PET12 Alox/CPP75_250mm Белая(расх 0,467)","foil_cost":0.41563000000000005,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":10.898435},"Экстра Стронг капсула РУ":{"bean":"Никарагуа зеленый LEBO","bean_cost":2.1884148,"bean2":"Робуста Уганда 17 жареный для зерна кофе LEBO","bean2_cost":2.5041640000000003,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.2820788},"Ристретто капсула РУ":{"bean":"Никарагуа зеленый LEBO","bean_cost":3.2826221999999996,"bean2":"Робуста Уганда 17 жареный для зерна кофе LEBO","bean2_cost":1.2520820000000001,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.124204200000001},"Мексика капсула (Стронг) РУ":{"bean":"Мексика Т.О. в зернах (Капсулы)","bean_cost":4.5154431,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.1049431},"Гондурас капсула (Деликейт) РУ":{"bean":"Гондурас SHG зеленый кофе LEBO","bean_cost":4.17525732,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":9.764757320000001},"Эспрессо № 7 капсула РУ":{"bean":"Никарагуа зеленый LEBO","bean_cost":3.06378072,"bean2":"Гондурас SHG зеленый кофе LEBO","bean2_cost":1.2289436640000002,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":9.882224384},"Горячий шоколад капсула DG":{"bean":"Горячий Шоколад 02 ","bean_cost":7.32134,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":13.780000000000001},"Cafe au lait DG айриш крим капсула":{"bean":"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг","bean_cost":6.588,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":"Бейлиз Ароматизатор  87800181 (Айриш)","aroma_cost":0.1529328,"total":13.199592800000001},"Cafe au lait DG ваниль капсула":{"bean":"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг","bean_cost":6.588,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":"Ванильно-сливочный Ароматизатор 87800354","aroma_cost":0.5499978,"total":13.5966578},"Cafe au lait DG карамель капсула":{"bean":"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг","bean_cost":6.588,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":"Карамель Ароматизатор 87800350 (ВМ)","aroma_cost":0.913664,"total":13.960324},"Американо капсула DG":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":6.344888000000001,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":"26. Перфорированная пленка DG 250мм. Артпласт (расх 0,260)","film_cost":0.1248,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":12.928348},"Американо Стронг капсула DG":{"bean":"Гондурас SHG зеленый кофе LEBO","bean_cost":6.8931135,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":"26. Перфорированная пленка DG 250мм. Артпласт (расх 0,260)","film_cost":0.1248,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":13.4765735},"Декаф капсула РУ":{"bean":"Декаф т.о.","bean_cost":6.4057981680000005,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":11.995298168000001},"Никарагуа капсула (Интенс) РУ":{"bean":"Никарагуа зеленый LEBO","bean_cost":4.629339,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.218839},"Колумбия Супремо капсула (Balance) РУ":{"bean":"Колумбия Супремо Лебо СО Medium (капсулы)","bean_cost":4.24271331,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":9.83221331},"Уганда СО капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":9.482954},"Кокос капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Кокос с экстрактом кокоса Т120647","aroma_cost":0.34102,"total":9.823974},"Амаретто капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.1335,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Амаретто Ликер Ароматизатор Т119251-1","aroma_cost":0.29384544,"total":9.74079944},"Вишня с коньяком капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Вишня черная тип ароматизатор T117936 ","aroma_cost":0.14895113999999998,"total":9.63190514},"Декаф капсула DG":{"bean":"Декаф Колумбия Эксельсо зеленый ИГ","bean_cost":9.727323144,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":"26. Перфорированная пленка DG 250мм. Артпласт (расх 0,260)","film_cost":0.1248,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":16.310783144000002},"Апельсин капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Апельсин красный сицилийский Т116600 Ароматизатор","aroma_cost":0.20895054,"total":9.69190454},"Клубника со сливками":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Клубника со сливками Т116606 Ароматизатор","aroma_cost":0.20738549999999997,"total":9.6903395},"Декаф Карамель капсула РУ":{"bean":"Декаф т.о.","bean_cost":6.4057981680000005,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Карамель сливочная Ароматизатор Т119794-1 (по 0,14)","aroma_cost":0.42046872,"total":12.415766888},"Декаф Айриш крим капсула РУ":{"bean":"Декаф т.о.","bean_cost":6.4057981680000005,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Айриш Крим T116925 Ароматизатор","aroma_cost":0.2933197,"total":12.288617868},"Декаф Ваниль капсула РУ":{"bean":"Декаф т.о.","bean_cost":6.4057981680000005,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Ваниль T119679 Ароматизатор до 0,4","aroma_cost":0.7824599999999998,"total":12.777758168000002},"Айриш крим капсула Шоко":{"bean":"Эфиопия Шоко","bean_cost":4.5738,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Айриш Крим T116925 Ароматизатор","aroma_cost":0.21567625,"total":10.378976250000001},"Шоколад капсула Шоко":{"bean":"Эфиопия Шоко","bean_cost":4.5738,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Шоколад Т115960 Ароматизатор","aroma_cost":0.2639117,"total":10.4272117},"Колумбия супремо Шоко":{"bean":"Эфиопия Шоко","bean_cost":4.5738,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.1633},"Декаф капсула Шоко":{"bean":"Гватемала Декаф Шоко","bean_cost":6.8094,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":12.398900000000001},"Мексика 5 капсула шоко":{"bean":"Мексика Чиапас ШОКО","bean_cost":7.290000000000001,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":12.8795},"Мексика 9 капсула Шоко":{"bean":"Мексика Чиапас ШОКО","bean_cost":7.290000000000001,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":12.8795},"Ванила капсула Шоко":{"bean":"Эфиопия Шоко","bean_cost":4.5738,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Ваниль T116016-2 Ароматизатор","aroma_cost":0.25132380000000004,"total":10.414623800000001},"Карамель капсула ШОКО РУ":{"bean":"Эфиопия Шоко","bean_cost":4.5738,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Карамель сливочная Ароматизатор Т119794-1 (по 0,14)","aroma_cost":0.25027900000000003,"total":10.413579},"Cafe au lait DG капсула 2в1(НАША СМЕСЬ)":{"bean":"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг НАША СМЕСЬ","bean_cost":4.226788515,"bean2":null,"bean2_cost":null,"foil":"9. Фольга PET12/PET12 Alox/CPP75_250mm Черная Конст Кубань(0,467)","foil_cost":0.45766,"film":null,"film_cost":null,"shell_cost":2.131,"aroma":null,"aroma_cost":null,"total":10.685448515000001},"Раунда капсула ШОКО РУ":{"bean":"Раунда капсула ШОКО РУ","bean_cost":4.7952,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.5,"aroma":null,"aroma_cost":null,"total":10.334700000000002},"Индонезия Суматра капсула":{"bean":"Индия собственная обжарка","bean_cost":5.292208349999999,"bean2":null,"bean2_cost":null,"foil":"25. Фольга алюминевая 20 мкм (ПРЕЗЕНТ) расх (0,141)","foil_cost":0.15932999999999997,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":null,"aroma_cost":null,"total":10.871538349999998},"Мед капсула":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"25. Фольга алюминевая 20 мкм (ПРЕЗЕНТ) расх (0,141)","foil_cost":0.15932999999999997,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Мед Т117002 Ароматизатор","aroma_cost":0.17640025,"total":9.649184250000001},"Корица капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"25. Фольга алюминевая 20 мкм (ПРЕЗЕНТ) расх (0,141)","foil_cost":0.15932999999999997,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Корица 120325 арома","aroma_cost":0.10410623999999999,"total":9.57689024},"Яблочный штрудель":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"25. Фольга алюминевая 20 мкм (ПРЕЗЕНТ) расх (0,141)","foil_cost":0.15932999999999997,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Яблочный штрудель Т119938","aroma_cost":0.15372624,"total":9.626510240000002},"Фундук капсула РУ":{"bean":"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO","bean_cost":3.8934540000000006,"bean2":null,"bean2_cost":null,"foil":"19. Фольга РУ с термолаком и праймером 0.020х205 Политайп  (Расх. 0,135)","foil_cost":0.16949999999999998,"film":null,"film_cost":null,"shell_cost":1.55,"aroma":"Нутелла Ароматизатор T120617","aroma_cost":0.23879999999999998,"total":9.721754}},"capvat":{"Айриш крим капсула РУ":11.853378907,"Карамель капсула РУ":12.073015507000003,"Ванила капсула РУ":12.215285563000002,"Шоколад капсула РУ":11.903559703000003,"Миндаль капсула РУ":11.752087736000002,"Cafe au lait DG капсула 2в1":15.916925199999998,"Уганда к молоку капсула DG":13.969338550000002,"Молоко капсула DG":13.296090699999999,"Экстра Стронг капсула РУ":12.544136136,"Ристретто капсула РУ":12.351529124,"Мексика капсула (Стронг) РУ":12.328030582,"Гондурас капсула (Деликейт) РУ":11.9130039304,"Эспрессо № 7 капсула РУ":12.056313748480001,"Горячий шоколад капсула DG":16.811600000000002,"Cafe au lait DG айриш крим капсула":16.103503216,"Cafe au lait DG ваниль капсула":16.587922516,"Cafe au lait DG карамель капсула":17.03159528,"Американо капсула DG":15.772584559999999,"Американо Стронг капсула DG":16.441419670000002,"Декаф капсула РУ":14.634263764960002,"Никарагуа капсула (Интенс) РУ":12.466983579999999,"Колумбия Супремо капсула (Balance) РУ":11.9953002382,"Уганда СО капсула РУ":11.56920388,"Кокос капсула РУ":11.985248279999999,"Амаретто капсула РУ":11.8837753168,"Вишня с коньяком капсула РУ":11.7509242708,"Декаф капсула DG":19.89915543568,"Апельсин капсула РУ":11.824123538799999,"Клубника со сливками":11.82221419,"Декаф Карамель капсула РУ":15.14723560336,"Декаф Айриш крим капсула РУ":14.992113798959998,"Декаф Ваниль капсула РУ":15.588864964960003,"Айриш крим капсула Шоко":12.662351025000001,"Шоколад капсула Шоко":12.721198274,"Колумбия супремо Шоко":12.399225999999999,"Декаф капсула Шоко":15.126658,"Мексика 5 капсула шоко":15.71299,"Мексика 9 капсула Шоко":15.71299,"Ванила капсула Шоко":12.705841036,"Карамель капсула ШОКО РУ":12.704566380000001,"Cafe au lait DG капсула 2в1(НАША СМЕСЬ)":13.0362471883,"Раунда капсула ШОКО РУ":12.608334000000001,"Индонезия Суматра капсула":13.263276786999997,"Мед капсула":11.772004785000002,"Корица капсула РУ":11.683806092800001,"Яблочный штрудель":11.744342492800001,"Фундук капсула РУ":11.860539880000001},"pkprice":{"Коробка белая":2.94,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул":58.42,"Коробка Dolche Gusto Cafe Au Lait 16 кап":21.8,"Шоу бокс Aroma 50 к":34.67,"Шоубокс 100 кофе Арома":39.26,"Шоу бокс Dolche Gusto Cappuccino 48 капсул":58.42,"Коробка Dolche Gusto Cappuccino 16 кап":22.78,"Коробка Dolce Gusto Cafe Au Lait 30 капсул":26.33,"Коробка Dolche Gusto Cafe Au Lait 10 капсул":17.93,"Шоубокс 100 кофе Классик":49.7,"Коробка Dolche Gusto Hot Chocolate 16 кап":20.13,"Гофрокороб DG 96 390х250х130":16.76,"Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш":20.17,"Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль":20.17,"Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель":20.17,"Шоу бокс Caramel, Vanilla, Chocolate 30 к":17.93,"Коробка Dolche Gusto Americano 16 кап":22.78,"Шоу бокс Dolche Gusto Americano 48 кап":47.05,"Шоу бокс Classic 50 к":34.67,"Коробка Dolche Gusto Latte Machiatto 16 кап":20.13,"Коробка Dolche Gusto Cioccolato 16 кап":22.78,"Коробка Dolche Gusto Americano Strong 16":22.78,"Кружочки":0.12,"Коробка дрип TANZANIA 25 шт.":21.55,"Коробка дрип BRAZIL 25 шт.":21.55,"Коробка дрип COLOMBIA 25 шт.":21.55,"Гофрокороб 220х170х130 (под дрипы)":8.32,"Шоу бокс DG HB Americano 48 кап + вкладыш":59.77,"Шоу бокс DG HB Caf? au lait 48 кап + вкладыш":52.5,"Шоу бокс DG HB Cappuccino 48 кап + вкладыш":59.77,"Шоу бокс DG HB Hot chocolate 48 кап + вкладыш":45,"Шоу бокс DG HB Latte Machiato 48 кап + вкладыш":45,"Шоу бокс Italiano HB":28.38,"Шоу бокс Scandinavia HB":28.38,"Шоу бокс Aroma HB":28.38,"Шоу бокс 30 Extra Strong":15.83,"Коробка Choco&Nuts HB":22.5,"Шоу бокс Dolche Gusto Latte Machiatto 48 кап":58.42,"Шоу бокс Dolche Gusto Chocolate (48 капсул)":38.42,"Шоу бокс 30 Amaretto, Irish cream, Cherry with cognac":19.37,"Шоу бокс 30 Irish cream":15.83,"Шоу бокс 30 Irish Cream, Mindal, Coconat":16,"Коробка Torino Caramel Gioia":8.67,"Коробка Sanremo Irish Cream Gioia":8.67,"Коробка Roma Intenso Gioia":8.67,"Коробка Bergamo Chocolate Gioia":8.67,"Коробка Palermo Extra Forte Gioia":8.67,"Коробка Verona Almond Gioia":8.67,"Коробка Firenze Ristretto Gioia":8.67,"Коробка Modena Vanilla Gioia":8.67,"Коробка Venezia Delicato Gioia":8.67,"Коробка Milano Espresso Gioia":8.67,"Коробка Gioia Classico набор 100":42.75,"Коробка Gioia Aromatico набор 100":42.75,"Коробка Gioia Classico набор 50":24.08,"Коробка Gioia Aromatico набор 50":24.08,"Шоу бокс 30 Extra Strong, Intense, Ristretto":16.75,"Коробка Dolche Gusto Cappuccino 10 капсул":19.37,"Коробка Dolche Gusto Americano 10 капсул":16.2,"Коробка Dolche Gusto Americano Strong 10 капсул":18.33,"Коробка Dolche Gusto Сioccolato 10 капсул":19.37,"Коробка Dolche Gusto Latte 10 капсул":16.5,"Коробка Dolche Gusto Decaf 10 капсул":16.75,"Коробка Dolche Gusto Hot Сhocolate 10 капсул":20.45,"Коробка Gioia \"Verona Almond\"":8.33,"Коробка Gioia \"Bergamo Chocolate\"":8.33,"Коробка Gioia \"Modena Vanilla\"":8.33,"Коробка Gioia \"Venezia Delicato\"":9.14,"Коробка Gioia \"Milano Espresso\"":9.14,"Коробка Gioia \"Palermo Extra Forte\"":9.14,"Коробка Gioia \"Roma Intenso\"":9.14,"Коробка Gioia \"Firenze Ristretto\"":9.14,"Коробка Gioia \"Torino Caramel\"":8.67,"Коробка Gioia \"Sanremo Irish Cream\"":8.67,"Шоу бокс 30 Caramel":16.83,"Шоу бокс 30 Mindal":16,"Шоу бокс 30 Vanilla":16,"Шоу бокс 30 Delicate, Balance, Espresso 7":15.83,"Шоу бокс Cherry with cognac, Orange, Strawberry cream (30)":19.37,"Коробка Cappuccino DG 30":27.43,"Коробка Hot Сhocolate DG 30":35.68,"Коробка Chiocolato DG 30":35.68,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Ваниль":38.42,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Айриш":38.42,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Карамель":38.42,"Коробка Light roast CJ":9.25,"Коробка Strong CJ":5.58,"Коробка Amaretto SC":6.33,"Коробка Balanced SC":5.92,"Коробка Caramel SC":9.15,"Коробка Cherry cognac SC":5.58,"Коробка Chocolate SC":7.89,"Коробка Coconut SC":6.67,"Коробка Espresso 7 SC":8.42,"Коробка Extra Strong SC":8.17,"Коробка Decaf SC":6.57,"Коробка Decaf Caramel SC":8.17,"Коробка Decaf Irish Cream SC":8.17,"Коробка Decaf Vanilla SC":5.54,"Коробка Delicate SC":13.34,"Коробка Intense SC":13.34,"Коробка Irish Cream SC":8.17,"Коробка Mild SC":6.57,"Коробка на 10 290х210х90 шоко":10.53,"Коробка под шоко 10х10":11.42,"Коробка белая Dolche Gusto 16 капс":9.03,"Пакет квадропак 1000г, 8-ми шовный АВС-ПАК":12.83,"Коробка Vanilla SC":9.98,"Коробка Dolche Gusto Flat White 16 кап":17.82,"Шоу бокс SC 30 к NS":22.6,"Коробка Uganda SC":7.89,"Коробка Stronge SC":13.34,"Коробка Orange SC":7.89,"Коробка Mindal SC":7.89,"Коробка Corica SC":7.89,"Коробка Ristretto SC":7.89,"Коробка Apple strudel SC":7.89},"pkvat":{"Коробка белая":3.5867999999999998,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул":71.2724,"Коробка Dolche Gusto Cafe Au Lait 16 кап":26.596,"Шоу бокс Aroma 50 к":42.2974,"Шоубокс 100 кофе Арома":47.8972,"Шоу бокс Dolche Gusto Cappuccino 48 капсул":71.2724,"Коробка Dolche Gusto Cappuccino 16 кап":27.791600000000003,"Коробка Dolce Gusto Cafe Au Lait 30 капсул":32.1226,"Коробка Dolche Gusto Cafe Au Lait 10 капсул":21.8746,"Шоубокс 100 кофе Классик":60.634,"Коробка Dolche Gusto Hot Chocolate 16 кап":24.5586,"Гофрокороб DG 96 390х250х130":20.447200000000002,"Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш":24.607400000000002,"Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль":24.607400000000002,"Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель":24.607400000000002,"Шоу бокс Caramel, Vanilla, Chocolate 30 к":21.8746,"Коробка Dolche Gusto Americano 16 кап":27.791600000000003,"Шоу бокс Dolche Gusto Americano 48 кап":57.400999999999996,"Шоу бокс Classic 50 к":42.2974,"Коробка Dolche Gusto Latte Machiatto 16 кап":24.5586,"Коробка Dolche Gusto Cioccolato 16 кап":27.791600000000003,"Коробка Dolche Gusto Americano Strong 16":27.791600000000003,"Кружочки":0.1464,"Коробка дрип TANZANIA 25 шт.":26.291,"Коробка дрип BRAZIL 25 шт.":26.291,"Коробка дрип COLOMBIA 25 шт.":26.291,"Гофрокороб 220х170х130 (под дрипы)":10.1504,"Шоу бокс DG HB Americano 48 кап + вкладыш":72.9194,"Шоу бокс DG HB Caf? au lait 48 кап + вкладыш":64.05,"Шоу бокс DG HB Cappuccino 48 кап + вкладыш":72.9194,"Шоу бокс DG HB Hot chocolate 48 кап + вкладыш":54.9,"Шоу бокс DG HB Latte Machiato 48 кап + вкладыш":54.9,"Шоу бокс Italiano HB":34.623599999999996,"Шоу бокс Scandinavia HB":34.623599999999996,"Шоу бокс Aroma HB":34.623599999999996,"Шоу бокс 30 Extra Strong":19.3126,"Коробка Choco&Nuts HB":27.45,"Шоу бокс Dolche Gusto Latte Machiatto 48 кап":71.2724,"Шоу бокс Dolche Gusto Chocolate (48 капсул)":46.8724,"Шоу бокс 30 Amaretto, Irish cream, Cherry with cognac":23.6314,"Шоу бокс 30 Irish cream":19.3126,"Шоу бокс 30 Irish Cream, Mindal, Coconat":19.52,"Коробка Torino Caramel Gioia":10.577399999999999,"Коробка Sanremo Irish Cream Gioia":10.577399999999999,"Коробка Roma Intenso Gioia":10.577399999999999,"Коробка Bergamo Chocolate Gioia":10.577399999999999,"Коробка Palermo Extra Forte Gioia":10.577399999999999,"Коробка Verona Almond Gioia":10.577399999999999,"Коробка Firenze Ristretto Gioia":10.577399999999999,"Коробка Modena Vanilla Gioia":10.577399999999999,"Коробка Venezia Delicato Gioia":10.577399999999999,"Коробка Milano Espresso Gioia":10.577399999999999,"Коробка Gioia Classico набор 100":52.155,"Коробка Gioia Aromatico набор 100":52.155,"Коробка Gioia Classico набор 50":29.377599999999997,"Коробка Gioia Aromatico набор 50":29.377599999999997,"Шоу бокс 30 Extra Strong, Intense, Ristretto":20.435,"Коробка Dolche Gusto Cappuccino 10 капсул":23.6314,"Коробка Dolche Gusto Americano 10 капсул":19.764,"Коробка Dolche Gusto Americano Strong 10 капсул":22.362599999999997,"Коробка Dolche Gusto Сioccolato 10 капсул":23.6314,"Коробка Dolche Gusto Latte 10 капсул":20.13,"Коробка Dolche Gusto Decaf 10 капсул":20.435,"Коробка Dolche Gusto Hot Сhocolate 10 капсул":24.948999999999998,"Коробка Gioia \"Verona Almond\"":10.1626,"Коробка Gioia \"Bergamo Chocolate\"":10.1626,"Коробка Gioia \"Modena Vanilla\"":10.1626,"Коробка Gioia \"Venezia Delicato\"":11.1508,"Коробка Gioia \"Milano Espresso\"":11.1508,"Коробка Gioia \"Palermo Extra Forte\"":11.1508,"Коробка Gioia \"Roma Intenso\"":11.1508,"Коробка Gioia \"Firenze Ristretto\"":11.1508,"Коробка Gioia \"Torino Caramel\"":10.577399999999999,"Коробка Gioia \"Sanremo Irish Cream\"":10.577399999999999,"Шоу бокс 30 Caramel":20.5326,"Шоу бокс 30 Mindal":19.52,"Шоу бокс 30 Vanilla":19.52,"Шоу бокс 30 Delicate, Balance, Espresso 7":19.3126,"Шоу бокс Cherry with cognac, Orange, Strawberry cream (30)":23.6314,"Коробка Cappuccino DG 30":33.4646,"Коробка Hot Сhocolate DG 30":43.5296,"Коробка Chiocolato DG 30":43.5296,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Ваниль":46.8724,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Айриш":46.8724,"Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Карамель":46.8724,"Коробка Light roast CJ":11.285,"Коробка Strong CJ":6.8076,"Коробка Amaretto SC":7.7226,"Коробка Balanced SC":7.2223999999999995,"Коробка Caramel SC":11.163,"Коробка Cherry cognac SC":6.8076,"Коробка Chocolate SC":9.6258,"Коробка Coconut SC":8.1374,"Коробка Espresso 7 SC":10.2724,"Коробка Extra Strong SC":9.9674,"Коробка Decaf SC":8.0154,"Коробка Decaf Caramel SC":9.9674,"Коробка Decaf Irish Cream SC":9.9674,"Коробка Decaf Vanilla SC":6.7588,"Коробка Delicate SC":16.2748,"Коробка Intense SC":16.2748,"Коробка Irish Cream SC":9.9674,"Коробка Mild SC":8.0154,"Коробка на 10 290х210х90 шоко":12.846599999999999,"Коробка под шоко 10х10":13.9324,"Коробка белая Dolche Gusto 16 капс":11.016599999999999,"Пакет квадропак 1000г, 8-ми шовный АВС-ПАК":15.6526,"Коробка Vanilla SC":12.175600000000001,"Коробка Dolche Gusto Flat White 16 кап":21.7404,"Шоу бокс SC 30 к NS":27.572000000000003,"Коробка Uganda SC":9.6258,"Коробка Stronge SC":16.2748,"Коробка Orange SC":9.6258,"Коробка Mindal SC":9.6258,"Коробка Corica SC":9.6258,"Коробка Ristretto SC":9.6258,"Коробка Apple strudel SC":9.6258},"beankg":{"Смесь Мексика 50% / Робуста Уганда 50% жареный кофе LEBO":831.06,"Смесь Никарагуа 50% / Робуста Уганда 50% жареный кофе LEBO":721.01,"Гондурас LEBO жареный для капсул":918.8,"Никарагуа SHG жареный LEBO":970.77,"Робуста Уганда 17 жареный для зерна кофе LEBO":963.14,"Мексика LEBO их обжарка":978.84,"Танзания АА Dark LEBO их обжарка":955.51,"Колумбия Супремо Лебо СО Medium (капсулы)":785.68765,"Мексика Т.О. в зернах (Капсулы)":860.0844,"Гондурас SHG зеленый кофе LEBO":787.7844,"Уганда Т.О. в зернах СО (Капсулы)":799.6949999999999,"Уганда светлая в зернах CO Medium (капсулы+зерно)":799.6949999999999,"Эфиопия Jimma  Medium":652.11185,"Индия собственная обжарка":962.2196999999999,"Никарагуа зеленый LEBO":841.698,"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг":720,"Сухое Молоко Саргасап":204.55,"Горячий Шоколад 02":504.92,"Декаф Колумбия Эксельсо зеленый ИГ":1186.25892,"Бразилия САНТОС зеленый LEBO":737.895355,"Молоко White Line (молочный напиток) по 1кг":488.33,"Сухое цельное молоко Армада":309.09,"Гватемала Декаф Шоко":1261,"Эфиопия Шоко":847,"Мексика Чиапас ШОКО":1350,"Руанда Шоко":888,"Напиток растворимый фасованный порошкообразный \"Кофе 2 в 1\" Blend, 1кг НАША СМЕСЬ":461.9441,"КОФЕ сублимированный":206.846,"Цикорий":14.261999999999999,"Молоко Армада":228.72659999999996,"Сахар":12.1095,"Оплата обжарщика":55.7,"Аренда+Амортизация(Под зерно)":175.25},"aromakg":{"Айриш Крим T116925 Ароматизатор":1725.41,"Ваниль T116016-2 Ароматизатор":1795.17,"Ваниль T119679 Ароматизатор до 0,4":2608.2,"Ванильно-сливочный T116016 Ароматизатор":1675.82,"Вишня черная тип ароматизатор T117936":1731.99,"Ирисо-сливочный Т119794-2 Ароматизатор":3570,"Карамель сливочная Ароматизатор Т119794-1 (по 0,14)":2502.79,"Кокос с экстрактом кокоса Т120647":2890,"Миндаль горький Т117628-1 Ароматизатор":1303.52,"Нутелла Ароматизатор T120617":3980,"Сливочный ирис T119794 Ароматизатор":2949.62,"Шоколад Т115960 Ароматизатор":2030.09,"Бейлиз Ароматизатор  87800181 (Айриш)":1911.66,"Ванильно-сливочный Ароматизатор 87800354":1666.66,"Карамель Ароматизатор 87800350 (ВМ)":2284.16,"Амаретто Ликер Ароматизатор Т119251-1":2623.62,"Клубника со сливками Т116606 Ароматизатор":1382.57,"Ароматизатор Апельсин красный сицилийский R0362=Т116600":3370.17,"Корица 120325 арома":2478.72,"Яблочный штрудель Т119938":2260.68,"Мед Т117002 Ароматизатор":2713.85},"matcode":{"Айриш крим капсула РУ":"00-00004592","Карамель капсула РУ":"00-00004589","Ванила капсула РУ":"00-00004590","Шоколад капсула РУ":"00-00004591","Миндаль капсула РУ":"00-00004598","Cafe au lait DG капсула 2в1":"00-00006231","Уганда к молоку капсула DG":"00-00003479","Молоко капсула DG":"00-00003571","Экстра Стронг капсула РУ":"00-00004593","Ристретто капсула РУ":"00-00006642","Мексика капсула (Стронг) РУ":"00-00004595","Гондурас капсула (Деликейт) РУ":"00-00004599","Эспрессо № 7 капсула РУ":"00-00006791","Горячий шоколад капсула DG":"00-00003925","Cafe au lait DG айриш крим капсула":"00-00007567","Cafe au lait DG ваниль капсула":"00-00007566","Cafe au lait DG карамель капсула":"00-00007551","Американо капсула DG":"00-00003471","Американо Стронг капсула DG":"00-00003491","Декаф капсула DG":"00-00003972","Колумбия Супремо капсула (Balance) РУ":"00-00004600","Уганда СО капсула РУ":"00-00004635","Апельсин капсула РУ":"00-00004603","Клубника со сливками":"00-00004637","Кокос капсула РУ":"00-00006734","Амаретто капсула РУ":"00-00004604","Вишня с коньяком капсула РУ":"00-00007368","Никарагуа капсула (Интенс) РУ":"00-00004594","Декаф капсула РУ":"00-00006908","Декаф Карамель капсула РУ":"00-00006922","Декаф Айриш крим капсула РУ":"00-00006923","Индонезия Суматра капсула":"00-00009160","Мед капсула":"00-00002341","Корица капсула РУ":"00-00004602","Яблочный штрудель":"00-00000253","Декаф Ваниль капсула РУ":"00-00006921","Айриш крим капсула Шоко":"00-00006856","Шоколад капсула Шоко":"00-00006669","Колумбия супремо Шоко":"00-00002532","Декаф капсула Шоко":"00-00006877","Мексика 5 капсула шоко":"00-00006857","Мексика 9 капсула Шоко":"00-00007100","Ванила капсула Шоко":"00-00006855","Карамель капсула ШОКО РУ":"00-00006854","Коробка под шоко 10х10":"00-00001348","Коробка на 10 290х210х90 шоко":"00-00003800","Коробка белая":"00-00000892","Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул":"00-00006584","Коробка Dolche Gusto Cafe Au Lait 16 кап":"00-00006545","Шоу бокс Aroma 50 к":"00-00004344","Шоубокс 100 кофе Арома":"00-00007405","Шоу бокс Dolche Gusto Cappuccino 48 капсул":"00-00004040","Шоу бокс 30 Irish cream":"00-00004077","Шоу бокс 30 Amaretto, Irish cream, Cherry with cognac":"00-00005050","Коробка Dolche Gusto Cappuccino 16 кап":"00-00004322","Коробка Dolce Gusto Cafe Au Lait 30 капсул":"00-00008638","Коробка Dolche Gusto Cafe Au Lait 10 капсул":"00-00006583","Коробка Dolche Gusto Cappuccino 10 капсул":"00-00006578","Коробка Dolche Gusto Americano 10 капсул":"00-00006391","Коробка Dolche Gusto Hot Сhocolate 10 капсул":"00-00006581","Коробка Dolche Gusto Latte 10 капсул":"00-00006579","Коробка Dolche Gusto Americano Strong 10 капсул":"00-00006577","Коробка Dolche Gusto Decaf 10 капсул":"00-00006580","Шоубокс 100 кофе Классик":"00-00007406","Коробка Dolche Gusto Hot Chocolate 16 кап":"00-00004324","Гофрокороб DG 96 390х250х130":"00-00007587","Коробка Dolche Gusto Cafe Au Lait 16 кап Айриш":"00-00007512","Коробка Dolche Gusto Cafe Au Lait 16 кап Ваниль":"00-00007511","Коробка Dolche Gusto Cafe Au Lait 16 кап Карамель":"00-00007510","Шоу бокс Caramel, Vanilla, Chocolate 30 к":"00-00004079","Коробка Dolche Gusto Americano 16 кап":"00-00004321","Шоу бокс Dolche Gusto Americano 48 кап":"00-00004039","Шоу бокс Classic 50 к":"00-00004343","Шоу бокс 30 Irish Cream, Mindal, Coconat":"00-00004320","Шоу бокс Dolche Gusto Latte Machiatto 48 кап":"00-00004041","Шоу бокс 30 Extra Strong, Intense, Ristretto":"00-00004080","Коробка Dolche Gusto Latte Machiatto 16 кап":"00-00004323","Коробка Dolche Gusto Cioccolato 16 кап":"00-00004325","Коробка Dolche Gusto Сioccolato 10 капсул":"00-00006582","Коробка Dolche Gusto Americano Strong 16":"00-00004821","Кружочки":"00-00000121","Бразилия ДРИП 10,5 г":"00-00008479","Колумбия ДРИП 10,5 г":"00-00008480","Танзания ДРИП 10,5 г":"00-00008481","Коробка дрип TANZANIA 25 шт.":"00-00008433","Коробка дрип BRAZIL 25 шт.":"00-00008431","Коробка дрип COLOMBIA 25 шт.":"00-00008432","Шоу бокс DG HB Americano 48 кап + вкладыш":"00-00004046","Шоу бокс DG HB Caf? au lait 48 кап + вкладыш":"00-00007367","Шоу бокс DG HB Cappuccino 48 кап + вкладыш":"00-00004044","Шоу бокс DG HB Hot chocolate 48 кап + вкладыш":"00-00004317","Шоу бокс Dolche Gusto Chocolate (48 капсул)":"00-00004822","Шоу бокс DG HB Latte Machiato 48 кап + вкладыш":"00-00004045","Шоу бокс Italiano HB":"00-00002679","Шоу бокс Scandinavia HB":"00-00002677","Шоу бокс 30 Extra Strong":"00-00004414","Шоу бокс Aroma HB":"00-00002678","Шоу бокс 30 Caramel":"00-00005049","Шоу бокс 30 Mindal":"00-00004319","Шоу бокс 30 Vanilla":"00-00004318","Шоу бокс 30 Delicate, Balance, Espresso 7":"00-00004078","Шоу бокс Cherry with cognac, Orange, Strawberry cream (30)":"00-00005467","Коробка Cappuccino DG 30":"00-00008598","Коробка Hot Сhocolate DG 30":"00-00006585","Коробка Chiocolato DG 30":"00-00008597","Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Ваниль":"00-00007514","Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Айриш":"00-00007515","Шоу бокс Dolche Gusto Cafe Au Lait 48 капсул Карамель":"00-00007513","Коробка Stronge SC":"00-00001295","Коробка Orange SC":"00-00001031","Коробка Choco&Nuts HB":"00-00003587","Коробка Torino Caramel Gioia":"00-00007663","Коробка Sanremo Irish Cream Gioia":"00-00007659","Коробка Roma Intenso Gioia":"00-00007658","Коробка Bergamo Chocolate Gioia":"00-00007664","Коробка Palermo Extra Forte Gioia":"00-00007657","Коробка Verona Almond Gioia":"00-00007662","Коробка Firenze Ristretto Gioia":"00-00007660","Коробка Modena Vanilla Gioia":"00-00007661","Коробка Venezia Delicato Gioia":"00-00007665","Коробка Milano Espresso Gioia":"00-00007656","Коробка Gioia Classico набор 100":"00-00007694","Коробка Gioia Aromatico набор 100":"00-00007691","Коробка Gioia Classico набор 50":"00-00007693","Коробка Gioia Aromatico набор 50":"00-00007692","Коробка Gioia \"Verona Almond\"":"00-00007662","Коробка Gioia \"Bergamo Chocolate\"":"00-00007664","Коробка Gioia \"Modena Vanilla\"":"00-00007661","Коробка Gioia \"Venezia Delicato\"":"00-00007665","Коробка Gioia \"Milano Espresso\"":"00-00007656","Коробка Gioia \"Palermo Extra Forte\"":"00-00007657","Коробка Gioia \"Roma Intenso\"":"00-00007658","Коробка Gioia \"Firenze Ristretto\"":"00-00007660","Коробка Gioia \"Torino Caramel\"":"00-00007663","Коробка Gioia \"Sanremo Irish Cream\"":"00-00007659","Коробка Light roast CJ":"00-00001016","Коробка Strong CJ":"00-00001020","Коробка Amaretto SC":"00-00001024","Коробка Balanced SC":"00-00001299","Коробка Caramel SC":"00-00001301","Коробка Cherry cognac SC":"00-00001027","Коробка Chocolate SC":"00-00001296","Коробка Coconut SC":"00-00001028","Коробка Espresso 7 SC":"00-00001038","Коробка Extra Strong SC":"00-00001302","Коробка Decaf SC":"00-00001300","Коробка Decaf Caramel SC":"00-00003580","Коробка Decaf Irish Cream SC":"00-00003582","Коробка Decaf Vanilla SC":"00-00003581","Коробка Delicate SC":"00-00001294","Коробка Intense SC":"00-00001293","Коробка Irish Cream SC":"00-00001035","Коробка Vanilla SC":"00-00001298","Коробка Corica SC":"00-00001029","Коробка Mindal SC":"00-00001036","Коробка Ristretto SC":"00-00002787","Коробка Uganda SC":"00-00001033","Коробка Apple strudel SC":"00-00001025","Коробка Mild SC":"00-00001297","Гофрокороб 220х170х130 (под дрипы)":"00-00008477","Шоу бокс SC 30 к NS":"00-00009228","Коробка Dolche Gusto Flat White 16 кап":"00-00008986"}};
+const CACHE = DATA;               // встроенный справочник (кэш до обновления файлом)
+let refLabel = 'встроенный справочник';
+
+const $ = s => document.querySelector(s);
+const num = v => { if(v===null||v===undefined||v==='') return 0;
+  const x = typeof v==='number'? v : parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+  return isNaN(x)?0:x; };
+const norm = s => (s===null||s===undefined)?'':String(s).trim();
+const fmt = (n, dec=0) => (n===null||n===undefined||isNaN(n))?'—':
+  Number(n).toLocaleString('ru-RU',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const rub = n => (n===null||isNaN(n))?'—':n.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2})+' ₽';
+const price = n => (n===null||isNaN(n))?'—':n.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:4})+' ₽';
+
+// ---------- парсинг заказа ----------
+function parseOrder(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  let hIdx=-1,cCode=0,cName=2,cQty=3,cCap=4;
+  for(let i=0;i<Math.min(rows.length,20);i++){
+    const r=rows[i]||[];
+    for(let c=0;c<r.length;c++){
+      if(norm(r[c])==='Код 1С'){ hIdx=i;
+        r.forEach((v,j)=>{const t=norm(v).toLowerCase();
+          if(t==='код 1с')cCode=j;
+          if(t==='итого кол-во')cQty=j;
+          if(t==='кол-во капсул')cCap=j;
+          if(t.indexOf('наименование')>-1)cName=j;});
+      }
+    }
+    if(hIdx>-1)break;
+  }
+  const lines=[]; const start=hIdx>-1?hIdx+1:0;
+  for(let i=start;i<rows.length;i++){
+    const r=rows[i]||[]; const code=norm(r[cCode]);
+    if(!/^00-/.test(code))continue;
+    const qty=num(r[cQty]); if(qty<=0)continue;
+    lines.push({code,name:norm(r[cName]),qty,capPerUnit:num(r[cCap])});
+  }
+  let title=norm((rows[0]||[])[0]);
+  return {lines,title};
+}
+
+// ---------- справочник из «Себестоимости» ----------
+function buildDatasetFromCost(wb){
+  const g=n=>{const s=wb.Sheets[n];return s?XLSX.utils.sheet_to_json(s,{header:1,defval:null}):null;};
+  const kap=g('Капсулы'),st=g('Себес товара'),it=g('Итог'),sk=g('Сырье+коробки');
+  if(!kap||!st||!it||!sk) throw new Error('Не найдены листы: нужны «Капсулы», «Себес товара», «Итог», «Сырье+коробки».');
+  const capcost={},capvat={},capbom={};
+  for(let i=1;i<kap.length;i++){const r=kap[i];const n=norm(r[0]);if(!n)continue;
+    const t=num(r[12]),tv=num(r[13]);
+    if(t)capcost[n]=t; if(tv)capvat[n]=tv;
+    capbom[n]={bean:r[1],bean_cost:num(r[2]),bean2:r[3],bean2_cost:num(r[4]),
+      foil:r[5],foil_cost:num(r[6]),film:r[7],film_cost:num(r[8]),
+      shell_cost:num(r[9]),aroma:r[10],aroma_cost:num(r[11]),total:t};
+  }
+  const pkprice={},pkvat={},beankg={},aromakg={};
+  for(let i=2;i<sk.length;i++){const r=sk[i]||[];
+    const pn=norm(r[13]),pp=num(r[14]),pv=num(r[15]); if(pn&&pp>0){pkprice[pn]=pp; if(pv)pkvat[pn]=pv;}
+    const bn=norm(r[0]),bp=num(r[2]); if(bn&&bp>0)beankg[bn]=bp;
+    const an=norm(r[4]),ap=num(r[5]); if(an&&ap>0)aromakg[an]=ap;
+  }
+  const name2col={}; const hdr=st[0]||[];
+  for(let c=2;c<hdr.length;c++){const nm=norm(hdr[c]); if(nm&&!(nm in name2col))name2col[nm]=c;}
+  const capset=new Set(Object.keys(capcost));
+  const decompose=col=>{const comps=[];
+    for(let r=1;r<st.length;r++){const row=st[r]||[];const lab=norm(row[1]);const v=num(row[col]);
+      if(!lab||!(v>0))continue; if(lab.indexOf('Итого')===0)continue;
+      if(capset.has(lab)){const qr=v/capcost[lab]; if(qr<0.9)continue; comps.push({c:'capsule',n:lab,q:Math.round(qr)});}
+      else if(lab in pkprice){const qr=v/pkprice[lab]; if(qr<0.5)continue; comps.push({c:'packaging',n:lab,q:Math.round(qr)});}
+      else comps.push({c:'other',n:lab,q:null});
+    } return comps;};
+  const matcode={};
+  for(let r=1;r<st.length;r++){const row=st[r]||[];const code=norm(row[0]),lab=norm(row[1]);
+    if(code&&lab&&code.indexOf('00-')===0&&!(lab in matcode))matcode[lab]=code;}
+  const products={};
+  for(let i=1;i<it.length;i++){const r=it[i]||[];const code=norm(r[0]),nm=norm(r[1]);if(!code||!nm)continue;
+    const col=name2col[nm]; if(col===undefined)continue;
+    products[code]={name:nm,pn:num(r[2]),pv:num(r[3]),comp:decompose(col)};
+  }
+  if(Object.keys(products).length===0) throw new Error('Не удалось разобрать товары из «Итог».');
+  return {products,capbom,capvat,pkprice,pkvat,beankg,aromakg,matcode};
+}
+
+// ---------- распределение капсул по номиналу (наибольший остаток) ----------
+function allocCaps(weights,total){
+  const s=weights.reduce((a,b)=>a+b,0);
+  if(s<=0||total<=0) return weights.map(()=>0);
+  const ex=weights.map(w=>w/s*total), fl=ex.map(Math.floor);
+  let rem=total-fl.reduce((a,b)=>a+b,0);
+  const ord=ex.map((v,i)=>i).sort((a,b)=>(ex[b]-fl[b])-(ex[a]-fl[a]));
+  for(let i=0;i<rem&&i<ord.length;i++)fl[ord[i]]++;
+  return fl;
+}
+
+const CATCOL={'Зерно':'#16a34a','Ароматизатор':'#db2777','Фольга':'#8b5cf6','Плёнка':'#0ea5e9',
+  'Стаканчик':'#64748b','Работа/накладные':'#94a3b8','Упаковка':'#e07b00','Капсула':'#2f6df6'};
+
+// разложение набора капсул на сырьё (кол-во + стоимость) для одной позиции
+function explodeRawList(capCounts){
+  const out={}; const order=[];
+  const add=(cat,name,unit,priced,qtyAdd,cost)=>{const k=cat+'|'+name;
+    if(!out[k]){out[k]={cat,name,unit,priced,qty:0,cost:0};order.push(k);}
+    if(priced&&qtyAdd!==null)out[k].qty+=qtyAdd; if(!priced)out[k].priced=false;
+    out[k].cost+=cost;};
+  let ohd=0, ncap=0;
+  Object.keys(capCounts).forEach(cn=>{const b=DATA.capbom[cn];const cnt=capCounts[cn];if(!b)return;
+    ncap+=cnt;
+    const comp=(b.bean_cost||0)+(b.bean2_cost||0)+(b.foil_cost||0)+(b.film_cost||0)+(b.shell_cost||0)+(b.aroma_cost||0);
+    ohd+=cnt*((b.total||0)-comp);
+    [[b.bean,b.bean_cost],[b.bean2,b.bean2_cost]].forEach(([nm,pc])=>{if(!nm)return;nm=nm.trim();
+      const price=DATA.beankg[nm];add('Зерно',nm,'кг',!!price,price?cnt*(pc||0)/price:null,cnt*(pc||0));});
+    if(b.aroma){const nm=b.aroma.trim();const price=DATA.aromakg[nm];
+      add('Ароматизатор',nm,'кг',!!price,price?cnt*(b.aroma_cost||0)/price:null,cnt*(b.aroma_cost||0));}
+    if(b.foil)add('Фольга',b.foil.trim(),'шт',true,cnt,cnt*(b.foil_cost||0));
+    if(b.film)add('Плёнка',b.film.trim(),'шт',true,cnt,cnt*(b.film_cost||0));
+    const tier=b.shell_cost?('Стаканчик · '+fmt(b.shell_cost,3)+' ₽/шт'):'Стаканчик';
+    add('Стаканчик',tier,'шт',true,cnt,cnt*(b.shell_cost||0));
+  });
+  const list=order.map(k=>out[k]);
+  if(ohd>0.5)list.push({cat:'Работа/накладные',name:'Сборка и накладные (капсулы)',unit:'шт',priced:true,qty:ncap,cost:ohd});
+  return list;
+}
+
+// ---------- расчёт ----------
+function buildReport(lines){
+  const caps={},pack={},other={},unknown=[];
+  let units=0,totalCaps=0,costNet=0,costVat=0;
+  const pivotRows=[]; const colCaps=new Set(),colPack=new Set();
+  lines.forEach(L=>{
+    const p=DATA.products[L.code];
+    if(!p){unknown.push(L);return;}
+    units+=L.qty;
+    const cc=p.comp.filter(c=>c.c==='capsule');
+    const recipeSum=cc.reduce((s,c)=>s+c.q,0);
+    const nominal=L.capPerUnit>0?Math.round(L.capPerUnit*L.qty):Math.round(recipeSum*L.qty);
+    const alloc=allocCaps(cc.map(c=>c.q),nominal);
+    const cells={}; let lineCost=0; const lineCaps={}; const linePack=[];
+    cc.forEach((c,i)=>{const a=alloc[i]; if(a<=0)return;
+      const b=DATA.capbom[c.n]; const unit=b?b.total:0; const unitV=DATA.capvat[c.n]||unit;
+      caps[c.n]=caps[c.n]||{count:0,cost:0}; caps[c.n].count+=a; caps[c.n].cost+=a*unit;
+      totalCaps+=a; costNet+=a*unit; costVat+=a*unitV; lineCost+=a*unit;
+      cells[c.n]=(cells[c.n]||0)+a; colCaps.add(c.n); lineCaps[c.n]=(lineCaps[c.n]||0)+a;
+    });
+    p.comp.filter(c=>c.c==='packaging').forEach(c=>{const cnt=c.q*L.qty;
+      const up=DATA.pkprice[c.n]||0, uv=DATA.pkvat[c.n]||0;
+      pack[c.n]=pack[c.n]||{count:0,cost:0}; pack[c.n].count+=cnt; pack[c.n].cost+=cnt*up;
+      costNet+=cnt*up; costVat+=cnt*uv; lineCost+=cnt*up;
+      cells[c.n]=(cells[c.n]||0)+cnt; colPack.add(c.n);
+      linePack.push({cat:'Упаковка',name:c.n,unit:'шт',qty:cnt,priced:true,cost:cnt*up});
+    });
+    p.comp.filter(c=>c.c==='other').forEach(c=>{other[c.n]=(other[c.n]||0)+L.qty;});
+    const detail=explodeRawList(lineCaps).concat(linePack);
+    pivotRows.push({name:L.name||L.code,code:L.code,qty:L.qty,caps:nominal,cost:lineCost,cells,detail});
+  });
+
+  const beans={},foils={},films={},shells={},aromas={};
+  const addW=(obj,name,perCap,priceMap,cnt)=>{ if(!name)return; name=name.trim();
+    const price=priceMap[name]; if(!obj[name])obj[name]={kg:0,cost:0,priced:!!price};
+    if(price){obj[name].kg+=cnt*perCap/price; obj[name].priced=true;}
+    obj[name].cost+=cnt*(perCap||0);
+  };
+  Object.keys(caps).forEach(cn=>{const b=DATA.capbom[cn]; const cnt=caps[cn].count; if(!b)return;
+    addW(beans,b.bean,b.bean_cost,DATA.beankg,cnt);
+    addW(beans,b.bean2,b.bean2_cost,DATA.beankg,cnt);
+    addW(aromas,b.aroma,b.aroma_cost,DATA.aromakg,cnt);
+    if(b.foil){const n=b.foil.trim();foils[n]=foils[n]||{count:0,cost:0};foils[n].count+=cnt;foils[n].cost+=cnt*(b.foil_cost||0);}
+    if(b.film){const n=b.film.trim();films[n]=films[n]||{count:0,cost:0};films[n].count+=cnt;films[n].cost+=cnt*(b.film_cost||0);}
+    const tier=b.shell_cost?('Стаканчик · '+fmt(b.shell_cost,3)+' ₽/шт'):'Стаканчик (прочее)';
+    shells[tier]=shells[tier]||{count:0,cost:0};shells[tier].count+=cnt;shells[tier].cost+=cnt*(b.shell_cost||0);
+  });
+
+  pivotRows.sort((a,b)=>b.cost-a.cost);
+  pivotRows.forEach((r,i)=>r.id=r.code+'#'+i);
+  pivotRows.forEach(r=>{
+    const catTot={}; r.detail.forEach(d=>catTot[d.cat]=(catTot[d.cat]||0)+d.cost);
+    r.detail.sort((a,b)=>{
+      if(a.cat!==b.cat) return (catTot[b.cat]-catTot[a.cat])||a.cat.localeCompare(b.cat,'ru');
+      return b.cost-a.cost;
+    });
+  });
+  const cols=[...[...colCaps].sort((a,b)=>a.localeCompare(b,'ru')).map(n=>({n,cat:'capsule'})),
+              ...[...colPack].sort((a,b)=>a.localeCompare(b,'ru')).map(n=>({n,cat:'packaging'}))];
+  return {lines,caps,pack,other,unknown,beans,foils,films,shells,aromas,
+    units,totalCaps,costNet,costVat,pivotRows,cols};
+}
+
+let REP=null,sortState={},activeTab='order',PANELS=[],expanded=new Set(),pivotSort={key:'cost',dir:-1},selKeys=new Set();
+
+function kpiCards(R){
+  const nCaps=Object.keys(R.caps).length;
+  $('#kpis').innerHTML=
+    card(fmt(R.lines.length),'позиций')+
+    card(fmt(R.units),'товаров, шт.')+
+    card(fmt(R.totalCaps),'капсул всего')+
+    card(fmt(nCaps),'видов капсул')+
+    card(rub(R.costNet),'себестоимость без НДС','money')+
+    card(rub(R.costVat),'себестоимость с НДС','money');
+  function card(n,l,cls){return '<div class="kpi '+(cls||'')+'"><div class="n">'+n+'</div><div class="l">'+l+'</div></div>';}
+}
+
+// строит панели
+function renderPanels(R){
+  const panels=[];
+
+  // Заказ
+  {
+    const raw=R.pivotRows.map(L=>({sortk:[L.name,L.qty,L.caps,L.cost],
+      cells:[{h:'<div>'+L.name+'</div><div class="muted" style="font-size:12px">'+L.code+'</div>'},
+             {h:fmt(L.qty)},{h:fmt(L.caps)},{h:rub(L.cost)}]}));
+    panels.push({id:'order',title:'📋 Заказ',
+      tip:'Позиции из файла. «Капсул» — по столбцу «кол-во капсул». «Себестоимость» — материалы без НДС. Нажмите на заголовок столбца (↕), чтобы отсортировать.',
+      headers:[{t:'Позиция'},{t:'Кол-во, шт.',num:1},{t:'Капсул',num:1},{t:'Себест., б/НДС',num:1}],
+      raw,footer:['Итого',fmt(R.units),fmt(R.totalCaps),rub(R.costNet)]});
+  }
+
+  // капсулы / упаковка (кол-во + цена + стоимость)
+  const cntCostPanel=(id,title,tip,obj,priceMap,unitLabel)=>{
+    const keys=Object.keys(obj);
+    const raw=keys.map(k=>{const o=obj[k]; const unit=o.count?o.cost/o.count:0;
+      const code=(DATA.matcode&&DATA.matcode[k])||'';
+      return {sortk:[k,code,o.count,unit,o.cost],
+        cells:[{h:k},{h:code||'—'},{h:fmt(o.count)},{h:price(unit)},{h:rub(o.cost)}]};});
+    const tc=keys.reduce((s,k)=>s+obj[k].count,0), tcost=keys.reduce((s,k)=>s+obj[k].cost,0);
+    panels.push({id,title,tip,headers:[{t:'Наименование'},{t:'Код 1С'},{t:unitLabel,num:1},{t:'Цена/шт',num:1},{t:'Стоимость, б/НДС',num:1}],
+      raw,footer:['Итого','',fmt(tc),'',rub(tcost)]});
+  };
+  cntCostPanel('caps','🔵 Капсулы','Сколько капсул каждого вида и их стоимость.',R.caps,null,'Кол-во, шт.');
+  cntCostPanel('pack','📦 Упаковка','Коробки, шоу-боксы и пр. — количество и стоимость.',R.pack,null,'Кол-во, шт.');
+
+  // зерно (кг + стоимость, без «капсул»)
+  const kgPanel=(id,title,tip,obj,dec)=>{
+    const keys=Object.keys(obj);
+    const raw=keys.map(k=>{const o=obj[k];
+      return {sortk:[k,o.priced?o.kg:-1,o.cost],
+        cells:[{h:k},{h:o.priced?fmt(o.kg,dec):'—'},{h:rub(o.cost)}]};});
+    const tkg=keys.reduce((s,k)=>s+(obj[k].priced?obj[k].kg:0),0), tcost=keys.reduce((s,k)=>s+obj[k].cost,0);
+    panels.push({id,title,tip,headers:[{t:'Наименование'},{t:'Кг',num:1},{t:'Стоимость, б/НДС',num:1}],
+      raw,footer:['Итого',fmt(tkg,dec),rub(tcost)]});
+  };
+  kgPanel('beans','🌱 Зерно','Кг = капсулы × расход зерна на капсулу. Где не задана цена за кг — показана «—», но стоимость учтена. Входит в стоимость капсул.',R.beans,2);
+
+  // фольга / плёнка / стаканчики (кол-во + стоимость)
+  const cntPanel=(id,title,tip,obj,unitLabel)=>{
+    const keys=Object.keys(obj);
+    const raw=keys.map(k=>({sortk:[k,obj[k].count,obj[k].cost],
+      cells:[{h:k},{h:fmt(obj[k].count)},{h:rub(obj[k].cost)}]}));
+    const tc=keys.reduce((s,k)=>s+obj[k].count,0), tcost=keys.reduce((s,k)=>s+obj[k].cost,0);
+    panels.push({id,title,tip,headers:[{t:'Наименование'},{t:unitLabel,num:1},{t:'Стоимость, б/НДС',num:1}],
+      raw,footer:['Итого',fmt(tc),rub(tcost)]});
+  };
+  cntPanel('foils','🥧 Фольга','Штук фольги = число капсул с этой фольгой. Входит в стоимость капсул.',R.foils,'Кол-во, шт.');
+  cntPanel('films','🎞️ Плёнка','Перфорированная плёнка по видам капсул. Входит в стоимость капсул.',R.films,'Кол-во, шт.');
+  cntPanel('shells','🥤 Стаканчики','Пустые капсулы-стаканчики по цене/типу. Входит в стоимость капсул.',R.shells,'Кол-во, шт.');
+  kgPanel('aromas','🍮 Ароматизаторы','Кг = капсулы × расход на капсулу. Где нет цены за кг — «—», стоимость учтена. Входит в стоимость капсул.',R.aromas,3);
+
+  // Сводная (раскрывающийся список по позициям)
+  panels.push({id:'pivot',title:'🧾 По позициям',isPivot:true,
+    tip:'Нажмите на позицию, чтобы развернуть — внутри всё сырьё под неё: зерно, фольга, плёнка, стаканчики, ароматизаторы и упаковка, с количеством и стоимостью. Итог по позиции сходится с её себестоимостью.'});
+
+  return panels;
+}
+
+function draw(){
+  const tabsEl=$('#tabs'),panEl=$('#panels');
+  tabsEl.innerHTML='';panEl.innerHTML='';
+  PANELS.forEach(P=>{const t=document.createElement('div');
+    t.className='tab'+(P.id===activeTab?' active':'');
+    t.textContent=P.title;t.onclick=()=>{activeTab=P.id;draw();};tabsEl.appendChild(t);});
+  const P=PANELS.find(p=>p.id===activeTab)||PANELS[0];
+  const div=document.createElement('div');
+  let inner='<div class="tip">💡 <div><b>Подсказка.</b> '+P.tip+'</div></div>';
+  if(P.isPivot){ inner+=pivotControls()+'<div id="tblhost"></div>'; }
+  else{ inner+='<div class="searchbar"><input type="text" placeholder="Поиск по таблице…" id="srch"></div><div id="tblhost"></div>'; }
+  div.innerHTML=inner;panEl.appendChild(div);
+  if(P.isPivot){renderPivot();
+    $('#expAll').onclick=()=>{REP.pivotRows.forEach((r,i)=>expanded.add(r.code+'#'+i));renderPivot();};
+    $('#colAll').onclick=()=>{expanded.clear();renderPivot();};
+    const ps=$('#pivSrch'); if(ps)ps.oninput=e=>filterPivot(e.target.value.toLowerCase());
+  }
+  else{renderTable(P); $('#srch').addEventListener('input',e=>renderTable(P,e.target.value.toLowerCase()));}
+}
+
+function renderTable(P,filter=''){
+  let rows=P.raw;
+  if(filter)rows=rows.filter(r=>r.sortk.some(v=>String(v).toLowerCase().includes(filter)));
+  let st=sortState[P.id];
+  if(!st){let i=-1;P.headers.forEach((hh,idx)=>{if(hh.num)i=idx;}); if(i>=0)st={col:i,dir:-1};}  // по умолчанию: по себестоимости, от большего к меньшему
+  if(st){const d=st.dir;rows=[...rows].sort((a,b)=>{let x=a.sortk[st.col],y=b.sortk[st.col];
+    if(typeof x==='string'&&typeof y==='string')return d*x.localeCompare(y,'ru');
+    x=x??-Infinity;y=y??-Infinity;return d*(x-y);});}
+  const host=$('#tblhost');
+  if(!rows.length){host.innerHTML='<div class="empty">Ничего не найдено</div>';return;}
+  let h='<table><thead><tr>';
+  P.headers.forEach((hd,i)=>{let ar='';
+    if(st&&st.col===i)ar=' <span style="color:var(--brand);font-weight:800">'+(st.dir>0?'▲':'▼')+'</span>';
+    else if(hd.num)ar=' <span style="color:#b4bece;font-weight:700">▼</span>';
+    h+='<th class="'+(hd.num?'num sortable':'')+'" data-c="'+i+'">'+hd.t+ar+'</th>';});
+  h+='</tr></thead><tbody>';
+  rows.forEach(r=>{const rk=String(r.sortk[0]);const sel=selKeys.has(P.id+'|'+rk);
+    h+='<tr class="selectable'+(sel?' selected':'')+'" data-rk="'+rk.replace(/"/g,'&quot;')+'">';
+    r.cells.forEach((c,i)=>{h+='<td class="'+(P.headers[i].num?'num q':'')+'">'+c.h+'</td>';});h+='</tr>';});
+  h+='</tbody>';
+  if(P.footer){h+='<tfoot><tr>';P.footer.forEach((c,i)=>{h+='<td class="'+(P.headers[i].num?'num':'')+'">'+c+'</td>';});h+='</tr></tfoot>';}
+  h+='</table>';host.innerHTML=h;
+  host.querySelectorAll('th').forEach(th=>{th.onclick=()=>{const c=+th.dataset.c;const cur=sortState[P.id];
+    sortState[P.id]=cur&&cur.col===c?{col:c,dir:-cur.dir}:{col:c,dir:1};renderTable(P,filter);};});
+  host.querySelectorAll('tbody tr').forEach(tr=>{tr.onclick=()=>{const rk=tr.dataset.rk;if(rk==null)return;
+    const key=P.id+'|'+rk;
+    if(selKeys.has(key)){selKeys.delete(key);tr.classList.remove('selected');}
+    else{selKeys.add(key);tr.classList.add('selected');}};});
+}
+
+function pivotControls(){
+  return '<div class="toolbar"><div>'+
+    '<button class="btn ghost sm" id="expAll">Развернуть все</button> '+
+    '<button class="btn ghost sm" id="colAll">Свернуть все</button></div>'+
+    '<input type="text" id="pivSrch" placeholder="Поиск позиции…" '+
+    'style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;max-width:260px"></div>';
+}
+
+function detailTable(row){
+  let h='<table class="dtl"><thead><tr><th>Категория</th><th>Материал</th>'+
+    '<th class="num">Кол-во</th><th>Ед.</th><th class="num">Цена/ед</th><th class="num">Стоимость, б/НДС</th></tr></thead><tbody>';
+  let tot=0;
+  row.detail.forEach(d=>{ tot+=d.cost;
+    const showQ=d.priced!==false;
+    const dec=d.unit==='кг'?(d.cat==='Ароматизатор'?3:2):0;
+    const q=showQ?fmt(d.qty,dec):'—';
+    const pr=(showQ&&d.qty>0)?price(d.cost/d.qty):'—';
+    const col=CATCOL[d.cat]||'#94a3b8';
+    const code=(DATA.matcode&&DATA.matcode[d.name])||'';
+    h+='<tr><td><span class="catchip" style="background:'+col+'"></span>'+d.cat+'</td>'+
+       '<td>'+d.name+(code?'<div class="muted" style="font-size:11px">Код 1С: '+code+'</div>':'')+'</td>'+
+       '<td class="num">'+q+'</td><td>'+d.unit+'</td>'+
+       '<td class="num">'+pr+'</td><td class="num q">'+rub(d.cost)+'</td></tr>';
+  });
+  h+='</tbody><tfoot><tr><td colspan="5">Итого по позиции (без НДС)</td><td class="num">'+rub(tot)+'</td></tr></tfoot></table>';
+  return h;
+}
+
+function renderPivot(){
+  const R=REP; const host=$('#tblhost');
+  const rows=[...R.pivotRows].sort((a,b)=>{const k=pivotSort.key,d=pivotSort.dir;
+    if(k==='name')return d*String(a.name).localeCompare(String(b.name),'ru');
+    return d*((a[k]||0)-(b[k]||0));});
+  const ar=k=>pivotSort.key===k?' <span style="color:var(--brand);font-weight:800">'+(pivotSort.dir>0?'▲':'▼')+'</span>':' <span style="color:#b4bece;font-weight:700">▼</span>';
+  let h='<table class="acc"><thead><tr><th style="width:26px"></th>'+
+    '<th data-s="name">Позиция'+ar('name')+'</th>'+
+    '<th class="num" data-s="qty">Кол-во'+ar('qty')+'</th>'+
+    '<th class="num" data-s="caps">Капсул'+ar('caps')+'</th>'+
+    '<th class="num" data-s="cost">Себест., б/НДС'+ar('cost')+'</th></tr></thead><tbody>';
+  rows.forEach(row=>{const k=row.id; const open=expanded.has(k);
+    h+='<tr class="acc-h'+(open?' open':'')+'" data-k="'+k+'"><td class="tgl">'+(open?'▼':'▶')+'</td>'+
+       '<td><b>'+row.name+'</b><div class="muted" style="font-size:11px">'+row.code+'</div></td>'+
+       '<td class="num">'+fmt(row.qty)+'</td><td class="num">'+fmt(row.caps)+'</td>'+
+       '<td class="num q">'+rub(row.cost)+'</td></tr>';
+    h+='<tr class="acc-d" data-d="'+k+'" style="display:'+(open?'':'none')+'"><td></td>'+
+       '<td colspan="4">'+detailTable(row)+'</td></tr>';
+  });
+  h+='</tbody><tfoot><tr><td></td><td><b>ИТОГО</b></td>'+
+     '<td class="num">'+fmt(R.units)+'</td><td class="num">'+fmt(R.totalCaps)+'</td>'+
+     '<td class="num q">'+rub(R.costNet)+'</td></tr></tfoot></table>';
+  host.innerHTML=h;
+  host.querySelectorAll('.acc-h').forEach(tr=>tr.onclick=()=>{const k=tr.dataset.k;
+    if(expanded.has(k))expanded.delete(k);else expanded.add(k);renderPivot();});
+  host.querySelectorAll('th[data-s]').forEach(th=>th.onclick=()=>{const k=th.dataset.s;
+    pivotSort=pivotSort.key===k?{key:k,dir:-pivotSort.dir}:{key:k,dir:-1};renderPivot();});
+}
+
+function filterPivot(q){
+  document.querySelectorAll('.acc-h').forEach(tr=>{
+    const show=!q||tr.textContent.toLowerCase().includes(q);
+    tr.style.display=show?'':'none';
+    const d=document.querySelector('.acc-d[data-d="'+tr.dataset.k+'"]');
+    if(d&&!show)d.style.display='none';
+  });
+}
+
+function showUnknown(R){
+  const box=$('#unknownBox');
+  box.innerHTML=R.unknown.length? '<div class="warnbox">⚠ Нет в справочнике «Себестоимость» ('+R.unknown.length+'): '+
+    R.unknown.map(u=>u.code+' — '+(u.name||'')).join('; ')+'. Пропущены в расчётах.</div>':'';
+}
+
+async function exportExcel(){
+  if(typeof ExcelJS==='undefined'){alert('Библиотека экспорта ещё загружается — попробуйте через секунду.');return;}
+  const R=REP;
+  const wb=new ExcelJS.Workbook();
+  const HFILL={type:'pattern',pattern:'solid',fgColor:{argb:'FF2F6DF6'}};
+  const HFONT={bold:true,color:{argb:'FFFFFFFF'},size:11};
+  const ZFILL={type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F8FC'}};
+  const M='#,##0.00" ₽"', M4='#,##0.0000" ₽"';
+  const mc=n=>(DATA.matcode&&DATA.matcode[n])||'';
+  function sheet(name,cols,rows){
+    const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:1}]});
+    ws.columns=cols;
+    rows.forEach(r=>ws.addRow(r));
+    const hr=ws.getRow(1); hr.height=24;
+    hr.eachCell(c=>{c.fill=HFILL;c.font=HFONT;
+      c.alignment={vertical:'middle',horizontal:'left',wrapText:true};
+      c.border={bottom:{style:'thin',color:{argb:'FF1F4FD0'}}};});
+    for(let i=2;i<=rows.length+1;i++){ if(i%2===0){ ws.getRow(i).eachCell({includeEmpty:true},c=>{ if(!c.fill||c.fill.type!=='pattern')c.fill=ZFILL; }); } }
+    ws.autoFilter={from:{row:1,column:1},to:{row:1,column:cols.length}};
+    return ws;
+  }
+  // 1. Заказ
+  sheet('Заказ',[
+    {header:'Код 1С',key:'c',width:15},
+    {header:'Позиция',key:'n',width:44},
+    {header:'Кол-во, шт.',key:'q',width:12,style:{numFmt:'#,##0'}},
+    {header:'Капсул',key:'k',width:12,style:{numFmt:'#,##0'}},
+    {header:'Себестоимость',key:'s',width:17,style:{numFmt:M}}],
+    R.pivotRows.map(r=>({c:r.code,n:r.name,q:r.qty,k:r.caps,s:r.cost})));
+  // 2-3. Капсулы / Упаковка (Код 1С первым)
+  const cntSheet=(name,obj)=>sheet(name,[
+    {header:'Код 1С',key:'c',width:15},
+    {header:'Наименование',key:'n',width:48},
+    {header:'Кол-во, шт.',key:'q',width:12,style:{numFmt:'#,##0'}},
+    {header:'Цена/шт',key:'p',width:13,style:{numFmt:M4}},
+    {header:'Стоимость',key:'s',width:17,style:{numFmt:M}}],
+    Object.keys(obj).sort((a,b)=>obj[b].cost-obj[a].cost)
+      .map(k=>({c:mc(k),n:k,q:obj[k].count,p:obj[k].count?obj[k].cost/obj[k].count:0,s:obj[k].cost})));
+  cntSheet('Капсулы',R.caps); cntSheet('Упаковка',R.pack);
+  // 4,8. кг
+  const kgSheet=(name,obj,dec)=>sheet(name,[
+    {header:'Наименование',key:'n',width:48},
+    {header:'Кг',key:'kg',width:13,style:{numFmt:'#,##0.'+'0'.repeat(dec)}},
+    {header:'Стоимость',key:'s',width:17,style:{numFmt:M}}],
+    Object.keys(obj).sort((a,b)=>obj[b].cost-obj[a].cost)
+      .map(k=>({n:k,kg:obj[k].priced?obj[k].kg:null,s:obj[k].cost})));
+  kgSheet('Зерно',R.beans,2);
+  // 5-7. шт
+  const pcSheet=(name,obj)=>sheet(name,[
+    {header:'Наименование',key:'n',width:48},
+    {header:'Кол-во, шт.',key:'q',width:12,style:{numFmt:'#,##0'}},
+    {header:'Стоимость',key:'s',width:17,style:{numFmt:M}}],
+    Object.keys(obj).sort((a,b)=>obj[b].cost-obj[a].cost)
+      .map(k=>({n:k,q:obj[k].count,s:obj[k].cost})));
+  pcSheet('Фольга',R.foils); pcSheet('Плёнка',R.films); pcSheet('Стаканчики',R.shells);
+  kgSheet('Ароматизаторы',R.aromas,3);
+  // 9. По позициям (Код 1С первым)
+  const drows=[];
+  R.pivotRows.forEach(row=>row.detail.forEach(d=>drows.push({
+    c:mc(d.name),pos:row.name,pc:row.code,cat:d.cat,mat:d.name,
+    q:(d.priced!==false?d.qty:null),u:d.unit,
+    pr:(d.priced!==false&&d.qty>0?d.cost/d.qty:null),s:d.cost})));
+  sheet('По позициям',[
+    {header:'Код 1С позиции',key:'pc',width:15},
+    {header:'Позиция',key:'pos',width:34},
+    {header:'Код 1С сырья',key:'c',width:15},
+    {header:'Категория',key:'cat',width:16},
+    {header:'Материал',key:'mat',width:46},
+    {header:'Кол-во',key:'q',width:12},
+    {header:'Ед.',key:'u',width:7},
+    {header:'Цена/ед',key:'pr',width:14,style:{numFmt:M4}},
+    {header:'Стоимость',key:'s',width:17,style:{numFmt:M}}],
+    drows);
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='Сводка_по_заказу.xlsx'; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1500);
+}
+
+let LAST_LINES=null;
+function runOrder(lines,title){
+  LAST_LINES=lines;
+  REP=buildReport(lines);
+  PANELS=renderPanels(REP);activeTab='order';sortState={};expanded=new Set();selKeys=new Set();
+  kpiCards(REP);showUnknown(REP);draw();
+  $('#orderTitle').textContent=title||('Позиций: '+lines.length);
+  $('#result').style.display='block';
+}
+function handleOrder(file){
+  const rd=new FileReader();
+  rd.onload=e=>{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const {lines,title}=parseOrder(wb);
+    if(!lines.length){alert('Не удалось найти позиции. Это точно файл «Общая сборка»?');return;}
+    runOrder(lines,title); window.scrollTo({top:0,behavior:'smooth'});
+  };
+  rd.readAsArrayBuffer(file);
+}
+function handleRef(file){
+  const rd=new FileReader();
+  rd.onload=e=>{ try{
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    DATA=buildDatasetFromCost(wb);
+    refLabel='обновлён из файла: '+file.name;
+    updRefStatus();
+    if(LAST_LINES) runOrder(LAST_LINES,$('#orderTitle').textContent);
+    alert('Справочник обновлён. Товаров в базе: '+Object.keys(DATA.products).length);
+  }catch(err){ alert('Ошибка обновления справочника: '+err.message); } };
+  rd.readAsArrayBuffer(file);
+}
+function updRefStatus(){
+  $('#refStatus').innerHTML='Справочник: <b>'+refLabel+'</b> · товаров '+Object.keys(DATA.products).length+
+    (DATA===CACHE?' · <span class="muted">данные вшиты в дашборд</span>':'');
+}
+
+const drop=$('#drop'),fileInput=$('#file'),dropRef=$('#dropRef'),fileRef=$('#fileRef');
+drop.onclick=()=>fileInput.click();
+fileInput.onchange=e=>{if(e.target.files[0])handleOrder(e.target.files[0]);};
+dropRef.onclick=()=>fileRef.click();
+fileRef.onchange=e=>{if(e.target.files[0])handleRef(e.target.files[0]);};
+[['dragover',1],['dragenter',1],['dragleave',0],['drop',0]].forEach(([ev,on])=>{
+  drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.toggle('hover',!!on);});
+  dropRef.addEventListener(ev,e=>{e.preventDefault();dropRef.classList.toggle('hover',!!on);});
+});
+drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleOrder(e.dataTransfer.files[0]);});
+dropRef.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleRef(e.dataTransfer.files[0]);});
+$('#btnReset').onclick=()=>{$('#result').style.display='none';fileInput.value='';window.scrollTo({top:0,behavior:'smooth'});};
+$('#btnExport').onclick=exportExcel;
+updRefStatus();
+</script>
+</body>
+</html>
