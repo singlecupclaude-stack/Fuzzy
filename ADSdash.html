@@ -3286,6 +3286,7 @@
 
   // Юнит-экономика товара ПО КАЖДОМУ кабинету (цена из реальных продаж + ставки/логистика кабинета).
   async function gatherCabinetEcon(bc, sku, base, plat) {
+    if (typeof PUBLIC_MODE !== 'undefined' && PUBLIC_MODE) return { ozon: null, wb: null, ym: null };
     var cost = bc ? (SOVA_COST[bc] || 0) : (base.cost || 0);
     var res = { ozon: null, wb: null, ym: null };
     try { await ensureWbStocks(); } catch (e) {}   // подтянуть карту nmId→штрихкод WB
@@ -4813,7 +4814,12 @@
             cost:N(g['себест_ед'])||0,comm:N(g['комис_ед'])||0,logi:N(g['логист_ед'])||0,store:N(g['хранение_ед'])||0,
             ads:N(g['реклама_ед'])||0,profit:N(g['прибыль_ед'])||0,margin:N(g['маржа_%'])||0,capsLot:N(g['капс_уп'])||0,stock:g['остаток'] };
         });
-        CAPS_AGG[key]={ margin:N(o['маржа_%']), pc:N(o['приб_капс']), ac:N(o['рекл_капс']), caps:0, prof:0, ads:0, rev:0, profAll:0, items:items };
+        var _ca=0,_cp=0,_cad=0,_cr=0,_cpa=0;
+        items.forEach(function(it){ var oo=it.orders||0, cl=it.capsLot||0;
+          if(oo>0&&cl>0){_ca+=oo*cl;_cp+=(it.profit||0)*oo;_cad+=(it.ads||0)*oo;}
+          if(oo>0&&it.price>0){_cr+=it.price*oo;_cpa+=(it.profit||0)*oo;}
+        });
+        CAPS_AGG[key]={ margin:N(o['маржа_%']), pc:N(o['приб_капс']), ac:N(o['рекл_капс']), caps:_ca, prof:_cp, ads:_cad, rev:_cr, profAll:_cpa, items:items };
         return c;
       });
       STATE.all=all; STATE.platTotalRev=STATE.platTotalRev||{};
@@ -4847,7 +4853,8 @@
     var rows=items.map(function(r){
       var mc=r.margin>=15?'tl-green':(r.margin>=0?'tl-yellow':'tl-red');
       var o=r.orders||0;
-      return '<tr><td>'+esc(r.name||r.sku||'—')+(r.sku?'<div class="cd-meta">'+esc(r.sku)+'</div>':'')+'</td>'+
+      var nameCell='<span class="oz-pos cd-name" data-plat="'+c.platform+'" data-sku="'+esc(r.sku||'')+'" data-offer="'+esc(r.sku||'')+'" data-name="'+esc(r.name||'')+'" data-views="'+(r.views||0)+'" data-cart="'+(r.cart||0)+'" data-orders="'+o+'" data-revenue="'+Math.round(r.revenue||0)+'" data-price="'+Math.round(r.price||0)+'" data-cost="'+Math.round(r.cost||0)+'" data-comm="'+Math.round(r.comm||0)+'" data-logi="'+Math.round(r.logi||0)+'" data-ads="'+Math.round(r.ads||0)+'" data-profit="'+Math.round(r.profit||0)+'" data-store="'+Math.round(r.store||0)+'" data-margin="'+(r.margin||0).toFixed(1)+'" data-stock="'+(r.stock!=null&&r.stock!==''?r.stock:'')+'" title="Клик — фильтр кампаний по этому товару">'+esc(r.name||r.sku||'—')+'</span>'+(r.sku?'<div class="cd-meta">'+esc(r.sku)+'</div>':'');
+      return '<tr><td>'+nameCell+'</td>'+
         '<td>'+(r.views?fmtNum(r.views):'—')+'</td>'+
         '<td>'+(r.clicks?fmtNum(r.clicks):'—')+'</td>'+
         '<td>'+(r.cart?fmtNum(r.cart):'—')+'</td>'+
