@@ -4800,13 +4800,14 @@
       var all=res[0].filter(function(o){return o&&o['название'];}).map(function(o){
         var sp=N(o['расход'])||0, rv=N(o['выручка'])||0;
         var c={ id:_cidOf(o['id'],o['название']), platform:o['площадка'], cabinet:o['кабинет']||'', name:o['название'],
-          typeLabel:o['тип']||'', statusLabel:o['статус']||'', active:/актив/i.test(o['статус']||''),
+          typeLabel:o['тип']||'', statusLabel:o['статус']||'', active:!/останов|пауз|архив|заверш|неактив|отключ|снят|заблок|paus|stop|arch/i.test(o['статус']||''),
           spend:sp, revenue:rv, views:N(o['показы'])||0, clicks:N(o['клики'])||0,
           orders:N(o['заказы'])||0, cpc:N(o['cpc'])||0, atbs:0, hasSpend:sp>0, noStats:false };
         c.drr=rv>0?sp/rv*100:(sp>0?Infinity:0);
         var dd=N(o['дрр_%']); if(dd!=null&&isFinite(dd)&&rv>0)c.drr=dd;
         c.ctr=c.views>0?c.clicks/c.views*100:(N(o['ctr_%'])||0);
         c.cart=N(o['корзина_%']);
+        c.atbs=(c.clicks>0&&c.cart>0)?Math.round(c.clicks*c.cart/100):0;
         try{ diagnose(c); }catch(e){}
         if(o['сигнал'])c.tone=o['сигнал'];
         if(o['действие'])c.action=o['действие'];
