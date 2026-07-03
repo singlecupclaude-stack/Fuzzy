@@ -3124,7 +3124,7 @@
     var plat = el.getAttribute('data-plat') || 'ozon';
     var sku = el.getAttribute('data-sku'), offer = el.getAttribute('data-offer'), name = el.getAttribute('data-name');
     var base = {
-      views: +el.getAttribute('data-views') || 0, cart: +el.getAttribute('data-cart') || 0,
+      views: +el.getAttribute('data-views') || 0, clicks: +el.getAttribute('data-clicks') || 0, cart: +el.getAttribute('data-cart') || 0,
       orders: +el.getAttribute('data-orders') || 0, revenue: +el.getAttribute('data-revenue') || 0,
       price: +el.getAttribute('data-price') || 0, cost: +el.getAttribute('data-cost') || 0,
       comm: +el.getAttribute('data-comm') || 0, logi: +el.getAttribute('data-logi') || 0,
@@ -3365,6 +3365,22 @@
       '<p class="modal-sub">' + ((typeof PUBLIC_MODE !== 'undefined' && PUBLIC_MODE) ? 'по данным из Google-таблицы' : (plat === 'ozon' ? 'Гружу данные из Seller-аналитики…' : 'Считаю по данным кампании…')) + '</p>';
     $('modal').style.display = 'flex';
     var _PUB = (typeof PUBLIC_MODE !== 'undefined' && PUBLIC_MODE);
+    if (_PUB) {
+      var _v=base.views||0,_cl=base.clicks||0,_ct=base.cart||0,_or=base.orders||0,_rv=base.revenue||0;
+      var _pr=base.price||0,_pf=base.profit||0,_mg=base.margin||0;
+      function _cvp(a,b){ return (b>0&&a>0)?pct(a/b*100):'—'; }
+      function _cell(x){ return '<td style="padding:7px 10px;border-bottom:1px solid rgba(168,93,54,.15);text-align:right;font-weight:600">'+x+'</td>'; }
+      function _tbl(title,arr){ arr=arr.filter(function(r){return r;}); if(!arr.length) return ''; return '<div class="cd-h" style="margin-top:14px">'+title+'</div><table style="width:100%;border-collapse:collapse;margin-top:6px">'+arr.map(function(r){return '<tr><td style="padding:7px 10px;border-bottom:1px solid rgba(168,93,54,.15)">'+r[0]+'</td>'+_cell(r[1])+'</tr>';}).join('')+'</table>'; }
+      var _fr=[['Показы',_v>0?fmtNum(_v):'—'],['Клики'+(_v>0&&_cl>0?' · CTR '+pct(_cl/_v*100,2):''),_cl>0?fmtNum(_cl):'—'],['Добавления в корзину',_ct>0?fmtNum(_ct):'—'],['Заказы',_or>0?fmtNum(_or):'—'],['Выручка',_rv>0?fmtMoney(_rv):'—']];
+      var _cv=[['Клик → корзина',_cvp(_ct,_cl)],['Корзина → заказ',_cvp(_or,_ct)],['Показ → заказ',_cvp(_or,_v)]];
+      var _ec=_pr>0?[['Цена за единицу','<b>'+fmtMoney(_pr)+'</b>'],['Прибыль за единицу',fmtMoney(_pf)],['Маржа','<span class="tl '+(_mg>=15?'tl-green':(_mg>=0?'tl-yellow':'tl-red'))+'">'+pct(_mg)+'</span>'],(base.stock!=null&&base.stock!==''?['Остаток',fmtNum(+base.stock||0)]:null)]:[];
+      $('modalBody').innerHTML =
+        '<div class="modal-kicker">воронка · '+(plat==='wb'?'WB':plat==='ym'?'ЯМ':'Ozon')+'</div><h2>'+esc(name||sku)+'</h2>'+
+        '<p class="modal-sub">по данным из Google-таблицы · за период</p>'+
+        _tbl('Воронка по товару',_fr)+_tbl('Конверсии',_cv)+_tbl('Юнит-экономика (за единицу)',_ec)+
+        '<p class="cfg-hint" style="margin-top:12px">Цифры — из выгрузки приватного АДС. Для Ozon показы/корзины появляются, когда приватный подтянул Seller-аналитику; ЯМ отдаёт заказы и выручку.</p>';
+      return;
+    }
     var m = (plat === 'ozon' && !_PUB) ? (await fetchOzFunnel(sku) || {}) : {};
     // для WB/ЯМ и публичной витрины воронку строим из данных позиции (показы/корзины/заказы), без Ozon-API
     if (plat !== 'ozon' || _PUB) {
@@ -4856,7 +4872,7 @@
     var rows=items.map(function(r){
       var mc=r.margin>=15?'tl-green':(r.margin>=0?'tl-yellow':'tl-red');
       var o=r.orders||0;
-      var nameCell='<span class="oz-pos cd-name" data-plat="'+c.platform+'" data-sku="'+esc(r.sku||'')+'" data-offer="'+esc(r.sku||'')+'" data-name="'+esc(r.name||'')+'" data-views="'+(r.views||0)+'" data-cart="'+(r.cart||0)+'" data-orders="'+o+'" data-revenue="'+Math.round(r.revenue||0)+'" data-price="'+Math.round(r.price||0)+'" data-cost="'+Math.round(r.cost||0)+'" data-comm="'+Math.round(r.comm||0)+'" data-logi="'+Math.round(r.logi||0)+'" data-ads="'+Math.round(r.ads||0)+'" data-profit="'+Math.round(r.profit||0)+'" data-store="'+Math.round(r.store||0)+'" data-margin="'+(r.margin||0).toFixed(1)+'" data-stock="'+(r.stock!=null&&r.stock!==''?r.stock:'')+'" title="Клик — фильтр кампаний по этому товару">'+esc(r.name||r.sku||'—')+'</span>'+(r.sku?'<div class="cd-meta">'+esc(r.sku)+'</div>':'');
+      var nameCell='<span class="oz-pos cd-name" data-plat="'+c.platform+'" data-sku="'+esc(r.sku||'')+'" data-offer="'+esc(r.sku||'')+'" data-name="'+esc(r.name||'')+'" data-views="'+(r.views||0)+'" data-clicks="'+(r.clicks||0)+'" data-cart="'+(r.cart||0)+'" data-orders="'+o+'" data-revenue="'+Math.round(r.revenue||0)+'" data-price="'+Math.round(r.price||0)+'" data-cost="'+Math.round(r.cost||0)+'" data-comm="'+Math.round(r.comm||0)+'" data-logi="'+Math.round(r.logi||0)+'" data-ads="'+Math.round(r.ads||0)+'" data-profit="'+Math.round(r.profit||0)+'" data-store="'+Math.round(r.store||0)+'" data-margin="'+(r.margin||0).toFixed(1)+'" data-stock="'+(r.stock!=null&&r.stock!==''?r.stock:'')+'" title="Клик — фильтр кампаний по этому товару">'+esc(r.name||r.sku||'—')+'</span>'+(r.sku?'<div class="cd-meta">'+esc(r.sku)+'</div>':'');
       return '<tr><td>'+nameCell+'</td>'+
         '<td>'+(r.views?fmtNum(r.views):'—')+'</td>'+
         '<td>'+(r.clicks?fmtNum(r.clicks):'—')+'</td>'+
