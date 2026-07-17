@@ -1793,6 +1793,12 @@ function sborkaToWb(rows,baseName){
   // Числовой формат для количества / кратности / коробов
   for(var r=3;r<=aoa.length;r++){
     ['D','E','F'].forEach(function(c){var cell=ws[c+r]; if(cell) cell.z=wholeNumFmt;});
+    // Колонка F (Кол-во коробов) — живой формулой =D/E, когда кратность задана
+    var ecell=ws['E'+r];
+    if(ecell && typeof ecell.v==='number' && ecell.v!==0){
+      var fcell=ws['F'+r]||(ws['F'+r]={t:'n'});
+      fcell.f='D'+r+'/E'+r; fcell.z=wholeNumFmt;
+    }
   }
   XLSX.utils.book_append_sheet(wb,ws,safeSheetName('Сборочный лист'));
   return wb;
