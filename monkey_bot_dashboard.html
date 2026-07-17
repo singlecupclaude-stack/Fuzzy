@@ -602,28 +602,24 @@ body::before{
           <!-- Вариант 3: сводная + нумерация + проверка -->
           <div class="obsh-card" style="border-color:#10b981">
             <div class="obsh-card-title" style="color:#10b981">🔢 Сводная + нумерация + проверка</div>
-            <div class="obsh-card-sub">Три шага сразу: строит сводную по юрлицу (как Вариант 2), нумерует сборки (🔥 срочные → Москва → Питер → по кол-ву штук ↓) и делает проверку по площадкам против сводной (как Вариант 1). На выходе — один ZIP со всем.</div>
+            <div class="obsh-card-sub">Принимает сборки И заказники (заказник сам превращается в сборку). Разложит по юрлицам автоматически (00-→ООО, БП-→ИП): на каждое юрлицо — своя сводная + нумерация (🔥 срочные → Москва → Питер → по кол-ву ↓) + проверка по площадкам. На выходе один ZIP с папками ООО/ и ИП/.</div>
             <div class="proj-form-grid" style="margin-bottom:14px">
-              <div class="proj-field" style="min-width:180px">
-                <label class="proj-label">Юрлицо *</label>
-                <select class="proj-input" id="v3Legal" onchange="v3UpdatePreview()">
-                  <option value="ООО">ООО Кофепод</option>
-                  <option value="ИП">ИП Тимашков</option>
-                </select>
+              <div class="proj-field" style="flex:1;min-width:160px">
+                <label class="proj-label">Номер заказа ООО</label>
+                <input type="text" class="proj-input" id="v3OrderOOO" placeholder="Например: 44-26ООО" oninput="v3UpdatePreview()">
               </div>
-              <div class="proj-field" style="flex:1;min-width:180px">
-                <label class="proj-label">Номер заказа *</label>
-                <input type="text" class="proj-input" id="v3OrderNo" placeholder="Например: 44-26ООО" oninput="v3UpdatePreview()">
+              <div class="proj-field" style="flex:1;min-width:160px">
+                <label class="proj-label">Номер заказа ИП</label>
+                <input type="text" class="proj-input" id="v3OrderIP" placeholder="Например: 45-26ИП" oninput="v3UpdatePreview()">
               </div>
             </div>
-            <div class="obsh-mini">Имя сводной: <span id="v3FilePreview" style="color:var(--mk)">Общая сборка … .xlsx</span></div>
-            <div class="obsh-mini" id="v3LegalHint" style="margin-top:6px;color:var(--dim)">Юрлицо определяется по номеру заказа или именам файлов.</div>
+            <div class="obsh-mini" id="v3FilePreview" style="color:var(--mk)">Юрлица определяются автоматически по кодам (00- → ООО, БП- → ИП). Заполните номер для тех юрлиц, чьи файлы грузите.</div>
             <div class="multi-dz" id="v3Dz" style="max-width:100%"
                  ondragover="v3DzOver(event,true)" ondragleave="v3DzOver(event,false)" ondrop="v3DzDrop(event)">
               <input type="file" accept=".xlsx,.xls" multiple id="v3Input" onchange="v3Add(this.files)">
               <span class="dz-icon" style="font-size:36px">🔢</span>
-              <div class="dz-title" style="font-size:18px">ДОБАВИТЬ СБОРКИ</div>
-              <div class="dz-sub">Сборки по городам · 🔥 отметьте срочные</div>
+              <div class="dz-title" style="font-size:18px">ДОБАВИТЬ СБОРКИ / ЗАКАЗНИКИ</div>
+              <div class="dz-sub">Сборки по городам или заказники WB/Ozon/ЯМ/Сбер · 🔥 отметьте срочные</div>
             </div>
             <div class="files-list" id="v3FilesList" style="max-width:100%"></div>
             <button class="proc-btn" id="v3Btn" onclick="processV3()" style="max-width:100%">
@@ -3092,71 +3088,156 @@ function v3RenderFilesList(){
 }
 function v3UpdatePreview(){
   var el=document.getElementById('v3FilePreview'); if(!el) return;
-  var order=safeFilePart((document.getElementById('v3OrderNo')&&document.getElementById('v3OrderNo').value)||'')||'…';
-  var sel=document.getElementById('v3Legal');
-  var legal=inferObshLegal(sel&&sel.value,order==='…'?'':order,S.v3Files);
-  el.textContent='Общая сборка '+order+' '+todayRu()+' '+legal+'.xlsx';
-  var hint=document.getElementById('v3LegalHint');
-  if(hint){ var info=inferObshLegalInfo(sel&&sel.value,order==='…'?'':order,S.v3Files); hint.textContent='Юрлицо: '+info.legal+' · определено по '+info.source+'.'; }
+  var oo=safeFilePart((document.getElementById('v3OrderOOO')&&document.getElementById('v3OrderOOO').value)||'')||'…';
+  var ip=safeFilePart((document.getElementById('v3OrderIP')&&document.getElementById('v3OrderIP').value)||'')||'…';
+  el.innerHTML='ООО: <b>Общая сборка '+oo+' '+todayRu()+' ООО.xlsx</b> &nbsp;·&nbsp; ИП: <b>Общая сборка '+ip+' '+todayRu()+' ИП.xlsx</b><br>'
+    +'<span style="color:var(--dim,#9ca3af)">Юрлица определяются автоматически по кодам (00- → ООО, БП- → ИП).</span>';
 }
-async function processV3(){
-  if(!S.v3Files.length){toast('Добавьте сборки','err');return;}
-  if(!S.bdRows){toast('БД не загружена','err');return;}
-  var orderNo=safeFilePart(document.getElementById('v3OrderNo').value||'');
-  if(!orderNo){toast('Введите номер заказа','err');document.getElementById('v3OrderNo').focus();return;}
-  var legal=inferObshLegal((document.getElementById('v3Legal')&&document.getElementById('v3Legal').value)||'ООО',orderNo,S.v3Files);
-  if(document.getElementById('v3Legal')) document.getElementById('v3Legal').value=legal;
-  v3UpdatePreview();
-  showSpinner('Строим сводную…');
+// Юрлицо файла по кодам 1С в нём (00-→ООО, БП-→ИП); f.legal имеет приоритет.
+function detectFileLegal(f){
+  if(f.legal==='ООО'||f.legal==='ИП') return f.legal;
   try{
-    var c=obshConsolidateFiles(S.v3Files, legal, function(i,n,name){ document.getElementById('spinTxt').textContent='Читаем '+(i+1)+'/'+n+': '+name; });
-    if(!c.rows.length) throw new Error(obshEmptyMsg(c,legal));
-    var wbOut=obshConsolidatedToWb(c.rows,legal,orderNo);
-    var fileName='Общая сборка '+orderNo+' '+todayRu()+' '+legal+'.xlsx';
-    var svodBuf=XLSX.write(wbOut,{type:'array',bookType:'xlsx'});
+    var wb=XLSX.read(f.buf,{type:'array'});
+    var ooo=0, ip=0;
+    wb.SheetNames.forEach(function(sn){
+      var raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+      var hr=legacyFindHeaderRow(raw);
+      var ci=legacyHeaderIndex(raw[hr]||[],['Код 1С','Код1С','Артикул'],0);
+      for(var r=hr+1;r<raw.length;r++){
+        var code=normCell((raw[r]||[])[ci]);
+        if(/^бп-/i.test(code)) ip++; else if(/^00-/.test(code)) ooo++;
+      }
+    });
+    return ip>ooo?'ИП':'ООО';
+  }catch(e){ return 'ООО'; }
+}
+// Похоже ли на готовую сборку 1С (шапка с «Код 1С» + «Итого кол-во»/«Кратность короба»)?
+function looksLikeSborka(wb){
+  var ws=wb.Sheets[wb.SheetNames[0]]; if(!ws) return false;
+  var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  for(var r=0;r<Math.min(raw.length,6);r++){
+    var cells=(raw[r]||[]).map(function(x){return normKey(x);});
+    var hasCode=cells.some(function(x){return x==='код 1с'||x==='код1с';});
+    var hasQty=cells.some(function(x){return x.indexOf('итого кол')>=0||x.indexOf('кратность короб')>=0||x.indexOf('кол-во короб')>=0;});
+    if(hasCode&&hasQty) return true;
+  }
+  return false;
+}
+// Готовим входные файлы В3: заказники конвертируем в сборки (как «Заказник → Сборка»),
+// готовые сборки пропускаем как есть. Возвращает {files:[...], converted:N}.
+function v3PrepareFiles(files){
+  var out=[]; var converted=0;
+  (files||[]).forEach(function(f){
+    var wb;
+    try{ wb=XLSX.read(f.buf,{type:'array'}); }catch(e){ out.push(f); return; }
+    // 1) Многоблочный заказник (ВБ/ЯМ ООО/ИП в одном листе) → несколько сборок
+    if(isMultiBlockOrder(wb)){
+      var blocks=parseMultiBlockOrderToSborkas(wb, S.bdRows, f.name);
+      blocks.forEach(function(b){
+        var buf=XLSX.write(sborkaToWb(b.rows,b.name),{type:'array',bookType:'xlsx'});
+        out.push({name:'Сборка_заказа_'+b.name+'.xlsx', size:buf.byteLength, buf:buf, urgent:!!f.urgent,
+                  legal:(b.name.indexOf('ИП')>=0?'ИП':'ООО')});
+        converted++;
+      });
+      return;
+    }
+    // 2) Уже готовая сборка 1С → как есть
+    if(looksLikeSborka(wb)){ out.push(f); return; }
+    // 3) Заказник маркетплейса (WB/Ozon/ЯМ/Сбер) → одна сборка
+    try{
+      var rows=applySborkaView(parseMarketplaceOrderToSborka(f.buf, S.bdRows));
+      var base=reverseBaseName(f.name);
+      var buf=XLSX.write(sborkaToWb(rows,base),{type:'array',bookType:'xlsx'});
+      out.push({name:'Сборка_заказа_'+base+'.xlsx', size:buf.byteLength, buf:buf, urgent:!!f.urgent});
+      converted++;
+    }catch(e){
+      out.push(f); // не распознали — оставляем как есть
+    }
+  });
+  return {files:out, converted:converted};
+}
 
-    document.getElementById('spinTxt').textContent='Нумеруем сборки и делаем проверку…';
-    var svodAoa=XLSX.utils.sheet_to_json(wbOut.Sheets[wbOut.SheetNames[0]],{header:1,defval:''});
-    var numbering=computeSborkaNumbering(S.v3Files);
-    var orderMap={}; numbering.forEach(function(x){ orderMap[x.f.name]={num:x.num, newName:x.newName}; });
-    var bundle=buildLegacyBundleFromFiles(S.v3Files, svodAoa, orderMap);
+async function processV3(){
+  if(!S.v3Files.length){toast('Добавьте сборки или заказники','err');return;}
+  if(!S.bdRows){toast('БД не загружена','err');return;}
+  var orderByLegal={
+    'ООО': safeFilePart((document.getElementById('v3OrderOOO')&&document.getElementById('v3OrderOOO').value)||''),
+    'ИП':  safeFilePart((document.getElementById('v3OrderIP')&&document.getElementById('v3OrderIP').value)||'')
+  };
+  v3UpdatePreview();
+  showSpinner('Готовим файлы (заказники → сборки)…');
+  try{
+    var prep=v3PrepareFiles(S.v3Files);
+    // Разбиваем по юрлицам (00-→ООО, БП-→ИП)
+    var groups={'ООО':[], 'ИП':[]};
+    prep.files.forEach(function(f){ var lg=detectFileLegal(f); (groups[lg]||(groups[lg]=[])).push(f); });
+
+    // Проверяем, что для каждого юрлица с файлами указан номер заказа
+    var need=[];
+    ['ООО','ИП'].forEach(function(lg){ if(groups[lg].length && !orderByLegal[lg]) need.push(lg); });
+    if(need.length){ hideSpinner(); toast('Есть файлы '+need.join(' и ')+', укажите номер заказа для '+(need.length>1?'них':need[0])+'.','err'); return; }
 
     var zip=new JSZip();
-    zip.file(fileName, svodBuf);
-    numbering.forEach(function(x){ zip.file('сборки_пронумерованные/'+x.newName, x.f.buf); });
-    bundle.entries.forEach(function(x){ zip.file('по_площадкам/'+x.name, x.buf); });
-    var zipBlob=await zip.generateAsync({type:'blob'});
-    var zipName='Сводная и проверка '+orderNo+' '+todayRu()+' '+legal+'.zip';
+    var results=[];
+    ['ООО','ИП'].forEach(function(legal){
+      var grp=groups[legal]; if(!grp.length) return;
+      var orderNo=orderByLegal[legal];
+      var c=obshConsolidateFiles(grp, legal, function(i,n,name){ document.getElementById('spinTxt').textContent=legal+': читаем '+(i+1)+'/'+n; });
+      if(!c.rows.length){ results.push({legal:legal, error:obshEmptyMsg(c,legal)}); return; }
+      var wbOut=obshConsolidatedToWb(c.rows,legal,orderNo);
+      var svodName='Общая сборка '+orderNo+' '+todayRu()+' '+legal+'.xlsx';
+      var svodBuf=XLSX.write(wbOut,{type:'array',bookType:'xlsx'});
+      var svodAoa=XLSX.utils.sheet_to_json(wbOut.Sheets[wbOut.SheetNames[0]],{header:1,defval:''});
+      var numbering=computeSborkaNumbering(grp);
+      var orderMap={}; numbering.forEach(function(x){ orderMap[x.f.name]={num:x.num, newName:x.newName}; });
+      var bundle=buildLegacyBundleFromFiles(grp, svodAoa, orderMap);
+      // Раскладываем в папку юрлица
+      zip.file(legal+'/'+svodName, svodBuf);
+      numbering.forEach(function(x){ zip.file(legal+'/сборки_пронумерованные/'+x.newName, x.f.buf); });
+      bundle.entries.forEach(function(x){ zip.file(legal+'/по_площадкам/'+x.name, x.buf); });
+      results.push({legal:legal, svodName:svodName, rows:c.rows.length, numbering:numbering, bundle:bundle});
+    });
 
-    v3RenderResult(zipBlob, zipName, fileName, c.rows.length, numbering, bundle);
-    toast('✅ Готово: сводная + нумерация + проверка ('+(bundle.checkOk?'проверка пройдена':'есть расхождения')+').', bundle.checkOk?'ok':'inf');
+    var okResults=results.filter(function(r){return !r.error;});
+    if(!okResults.length) throw new Error(results.map(function(r){return r.legal+': '+r.error;}).join(' | ')||'Нет данных для сборки.');
+
+    var zipBlob=await zip.generateAsync({type:'blob'});
+    var zipName='Сводные и проверка '+todayRu()+'.zip';
+    v3RenderResultMulti(zipBlob, zipName, results, prep.converted);
+    var okChecks=okResults.every(function(r){return r.bundle.checkOk;});
+    toast('✅ Готово по юрлицам: '+okResults.map(function(r){return r.legal;}).join(', ')+' ('+(okChecks?'проверки пройдены':'есть расхождения')+')'+(prep.converted?'. Заказников → сборок: '+prep.converted:'')+'.', okChecks?'ok':'inf');
   }catch(e){
     toast('❌ '+e.message,'err'); console.error(e);
   }finally{hideSpinner();}
 }
-function v3RenderResult(zipBlob, zipName, svodName, rowCount, numbering, bundle){
+function v3RenderResultMulti(zipBlob, zipName, results, converted){
   var box=document.getElementById('v3DownloadBox'); if(!box) return;
   var url=URL.createObjectURL(zipBlob);
-  var chkCls=bundle.checkOk?'ok':'crit';
-  var chkTxt=bundle.checkOk
-    ? 'Проверка пройдена: суммы сборок сходятся со сводной (Лист2!H1 = ИСТИНА).'
-    : 'Проверка НЕ пройдена: есть расхождения со сводной — смотрите Лист2 в full_форма_общего_заказа.xlsx.';
-  var listHtml=(numbering||[]).map(function(x){
-    return '<div style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px">'
-      +'<b style="min-width:26px;text-align:right">'+x.num+'.</b>'
-      +'<span>'+(x.urgent?'🔥 ':'')+projEscape(stripNumPrefix(x.name))+'</span>'
-      +'<span style="color:var(--dim,#9ca3af);margin-left:auto">'+cleanQty(x.qty)+' шт</span></div>';
+  var blocks=results.map(function(r){
+    if(r.error){
+      return '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border,#e5e7eb)">'
+        +'<div style="font-weight:700">'+r.legal+'</div>'
+        +'<div class="obsh-mini" style="color:var(--crit)">'+projEscape(r.error)+'</div></div>';
+    }
+    var chkOk=r.bundle.checkOk;
+    var listHtml=(r.numbering||[]).map(function(x){
+      return '<div style="display:flex;gap:8px;align-items:center;padding:2px 0;font-size:13px">'
+        +'<b style="min-width:24px;text-align:right">'+x.num+'.</b>'
+        +'<span>'+(x.urgent?'🔥 ':'')+projEscape(stripNumPrefix(x.name))+'</span>'
+        +'<span style="color:var(--dim,#9ca3af);margin-left:auto">'+cleanQty(x.qty)+' шт</span></div>';
+    }).join('');
+    return '<div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--border,#e5e7eb)">'
+      +'<div style="font-weight:700;font-size:15px">📁 '+r.legal+' — '+r.rows+' поз. · сборок: '+(r.numbering?r.numbering.length:0)+'</div>'
+      +'<div class="obsh-mini" style="margin-top:6px;color:var(--'+(chkOk?'ok':'crit')+')">'+(chkOk?'Проверка пройдена (Лист2!H1 = ИСТИНА).':'Проверка НЕ пройдена — смотрите Лист2 в full_форма_общего_заказа.xlsx.')+'</div>'
+      +'<div class="obsh-mini" style="margin-top:8px;font-weight:600">Нумерация (🔥 срочные → Москва → Питер → по кол-ву ↓):</div>'
+      +'<div style="margin-top:2px">'+listHtml+'</div></div>';
   }).join('');
-  var unm=(bundle.unmatched&&bundle.unmatched.length)
-    ? '<div class="obsh-mini" style="margin-top:8px;color:var(--dim,#9ca3af)">Не распознаны по площадке (нет в «по площадкам»): '+projEscape(bundle.unmatched.join(', '))+'</div>' : '';
   box.innerHTML='<div class="result-card" style="margin-top:16px">'
     +'<span class="rc-icon">✅</span><div class="rc-title">ГОТОВО!</div>'
-    +'<div class="rc-sub">Сводная: '+rowCount+' поз. · сборок пронумеровано: '+(numbering?numbering.length:0)+'</div>'
+    +'<div class="rc-sub">Разложено по юрлицам'+(converted?' · заказников превращено в сборки: '+converted:'')+'</div>'
     +'<a class="dl-btn zip" href="'+url+'" download="'+projEscape(zipName)+'">📦 СКАЧАТЬ ВСЁ (ZIP)</a>'
-    +'<div class="obsh-mini" style="margin-top:10px;color:var(--'+(chkCls==='ok'?'ok':'crit')+')">'+projEscape(chkTxt)+'</div>'
-    +'<div class="obsh-mini" style="margin-top:12px;font-weight:600">Нумерация сборок (🔥 срочные → Москва → Питер → по кол-ву ↓):</div>'
-    +'<div style="margin-top:4px">'+listHtml+'</div>'+unm
-    +'<div class="obsh-mini" style="margin-top:10px;color:var(--dim,#9ca3af)">В ZIP: <b>'+projEscape(svodName)+'</b> + папка «сборки_пронумерованные» + папка «по_площадкам» (по маркетплейсам + full.xlsx + full_форма_общего_заказа.xlsx с проверкой).</div>'
+    +blocks
+    +'<div class="obsh-mini" style="margin-top:12px;color:var(--dim,#9ca3af)">В ZIP на каждое юрлицо папка (ООО/ и/или ИП/): сводная + «сборки_пронумерованные» + «по_площадкам» (по маркетплейсам + full.xlsx + full_форма_общего_заказа.xlsx с проверкой).</div>'
     +'</div>';
 }
 function obshConsolidatedToWb(items,legal,orderNo){
