@@ -275,7 +275,7 @@ function capFmt(cn){ const b=DATA.capbom[cn]||{};
   if(/\bdg\b|дг|dolce/i.test(cn)) return 'ДГ';
   if((b.shell_cost||0)>=1.9) return 'ДГ';
   return 'НЕС'; }
-function shellTier(cn){ const f=capFmt(cn); return 'Стаканчик '+f+(f==='ДГ'?' (Dolce Gusto)':' (Nespresso)'); }
+function shellTier(cn){ const f=capFmt(cn); return 'Пустая капсула '+f+(f==='ДГ'?' (Dolce Gusto)':' (Nespresso)'); }
 
 // разложение набора капсул на сырьё (кол-во + стоимость) для одной позиции
 function explodeRawList(capCounts){
@@ -433,12 +433,12 @@ function renderPanels(R){
   };
   cntPanel('foils','🥧 Фольга','Штук фольги = число капсул с этой фольгой. Входит в стоимость капсул.',R.foils,'Кол-во, шт.');
   cntPanel('films','🎞️ Плёнка','Перфорированная плёнка по видам капсул. Входит в стоимость капсул.',R.films,'Кол-во, шт.');
-  cntPanel('shells','🥤 Стаканчики','Пустые капсулы (стаканчики) в разрезе формата: ДГ (Dolce Gusto, стакан 2.131 ₽) и НЕС (Nespresso, 1.55 ₽). Входит в стоимость капсул.',R.shells,'Кол-во, шт.');
+  cntPanel('shells','🥤 Пустые капсулы','Пустые капсулы (корпуса) в разрезе формата: ДГ (Dolce Gusto, 2.131 ₽) и НЕС (Nespresso, 1.55 ₽). Входит в стоимость капсул.',R.shells,'Кол-во, шт.');
   kgPanel('aromas','🍮 Ароматизаторы','Кг = капсулы × расход на капсулу. Где нет цены за кг — «—», стоимость учтена. Входит в стоимость капсул.',R.aromas,3);
 
   // Сводная (раскрывающийся список по позициям)
   panels.push({id:'pivot',title:'🧾 По позициям',isPivot:true,
-    tip:'Нажмите на позицию, чтобы развернуть — внутри капсулы этой позиции (по видам, кол-во и стоимость) и упаковка. Итог по позиции = её себестоимость. Разбор капсул на сырьё — во вкладках Зерно / Фольга / Плёнка / Стаканчики / Ароматизаторы.'});
+    tip:'Нажмите на позицию, чтобы развернуть — внутри капсулы этой позиции (по видам, кол-во и стоимость) и упаковка. Итог по позиции = её себестоимость. Разбор капсул на сырьё — во вкладках Зерно / Фольга / Плёнка / Пустые капсулы / Ароматизаторы.'});
 
   return panels;
 }
@@ -643,7 +643,7 @@ async function exportExcel(){
     Object.keys(obj).sort((a,b)=>obj[b].cost-obj[a].cost)
       .map(k=>({n:k,q:obj[k].count,s:obj[k].cost})),
     {n:'ИТОГО',q:ssum(obj,o=>o.count),s:ssum(obj,o=>o.cost)});
-  pcSheet('Фольга',R.foils); pcSheet('Плёнка',R.films); pcSheet('Стаканчики',R.shells);
+  pcSheet('Фольга',R.foils); pcSheet('Плёнка',R.films); pcSheet('Пустые капсулы',R.shells);
   kgSheet('Ароматизаторы',R.aromas,3);
   // 9. По позициям (Код 1С первым)
   const drows=[];
