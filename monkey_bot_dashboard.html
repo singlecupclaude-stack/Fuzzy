@@ -614,6 +614,14 @@ body::before{
               </div>
             </div>
             <div class="obsh-mini" id="v3FilePreview" style="color:var(--mk)">Юрлица определяются автоматически по кодам (00- → ООО, БП- → ИП). Заполните номер для тех юрлиц, чьи файлы грузите.</div>
+            <div class="obsh-mini" style="margin-top:12px;font-weight:600">Включить в форму общего заказа (full_форма_общего_заказа.xlsx):</div>
+            <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:8px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="v3MpOzon" checked style="width:16px;height:16px;cursor:pointer"> Ozon</label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="v3MpWB" style="width:16px;height:16px;cursor:pointer"> WildBerries</label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="v3MpYM" style="width:16px;height:16px;cursor:pointer"> Я.Маркет</label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="v3MpSBER" style="width:16px;height:16px;cursor:pointer"> Сбер</label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" id="v3MpMV" style="width:16px;height:16px;cursor:pointer"> М-видео</label>
+            </div>
             <div class="multi-dz" id="v3Dz" style="max-width:100%"
                  ondragover="v3DzOver(event,true)" ondragleave="v3DzOver(event,false)" ondrop="v3DzDrop(event)">
               <input type="file" accept=".xlsx,.xls" multiple id="v3Input" onchange="v3Add(this.files)">
@@ -2927,7 +2935,7 @@ function legacyCommonOrderFormToWb2(formRows, checkAoa){
 
 // ── Прогон «по площадкам» на тех же файлах, эталон проверки = переданный checkAoa ──
 // Возвращает {entries:[{name,buf}], checkOk, unmatched:[]}
-function buildLegacyBundleFromFiles(files, checkAoa, orderMap){
+function buildLegacyBundleFromFiles(files, checkAoa, orderMap, formMps){
   var mpGroups={Ozon:[],WildBerries:[],YM:[],SBER:[], 'M-video':[]};
   var unmatched=[];
   (files||[]).forEach(function(f){
@@ -2986,7 +2994,10 @@ function buildLegacyBundleFromFiles(files, checkAoa, orderMap){
     entries.push({name:'Общая сборка '+mp+'.xlsx', buf:XLSX.write(wbOut,{type:'array',bookType:'xlsx'})});
     allRows=allRows.concat(consolidatedRows);
   }
-  var formRows=legacyFullFormRows(allRows);
+  // В форму общего заказа включаем только отмеченные площадки (по умолчанию — Ozon).
+  // formMps задан (даже пустой) → фильтруем; не задан → все площадки.
+  var formSource=formMps?allRows.filter(function(r){return formMps.indexOf(r['Маркетплейс'])>=0;}):allRows;
+  var formRows=legacyFullFormRows(formSource);
   entries.push({name:'full.xlsx', buf:XLSX.write(legacySimpleFullWb(formRows),{type:'array',bookType:'xlsx'})});
   var formWb=legacyCommonOrderFormToWb2(formRows, checkAoa);
   entries.push({name:'full_форма_общего_заказа.xlsx', buf:XLSX.write(formWb,{type:'array',bookType:'xlsx'})});
@@ -3189,6 +3200,17 @@ async function processV3(){
     'ООО': safeFilePart((document.getElementById('v3OrderOOO')&&document.getElementById('v3OrderOOO').value)||''),
     'ИП':  safeFilePart((document.getElementById('v3OrderIP')&&document.getElementById('v3OrderIP').value)||'')
   };
+  // Какие площадки включать в форму общего заказа (по умолчанию — Ozon)
+  var MP_FORM=[
+    {legacy:'Ozon', q:'Ozon', id:'v3MpOzon'},
+    {legacy:'WildBerries', q:'WB', id:'v3MpWB'},
+    {legacy:'YM', q:'YM', id:'v3MpYM'},
+    {legacy:'SBER', q:'SBER', id:'v3MpSBER'},
+    {legacy:'M-video', q:'М-видео', id:'v3MpMV'}
+  ];
+  var enabledMp=MP_FORM.filter(function(m){var el=document.getElementById(m.id);return el&&el.checked;});
+  var formMps=enabledMp.map(function(m){return m.legacy;});
+  var enabledQ=enabledMp.map(function(m){return m.q;});
   v3UpdatePreview();
   showSpinner('Готовим файлы (заказники → сборки)…');
   try{
@@ -3212,10 +3234,16 @@ async function processV3(){
       var wbOut=obshConsolidatedToWb(c.rows,legal,orderNo);
       var svodName='Общая сборка '+orderNo+' '+todayRu()+' '+legal+'.xlsx';
       var svodBuf=XLSX.write(wbOut,{type:'array',bookType:'xlsx'});
-      var svodAoa=XLSX.utils.sheet_to_json(wbOut.Sheets[wbOut.SheetNames[0]],{header:1,defval:''});
+      // Эталон проверки = сводная, но по включённым площадкам (сумма их колонок)
+      var checkForm=[['Код 1С','Итого кол-во']];
+      c.rows.forEach(function(item){
+        var code=normCell(bdGet(item.bd,['Код 1С']));
+        var sum=enabledQ.reduce(function(s,k){return s+numVal(item.qty[k]);},0);
+        if(code && sum>0) checkForm.push([code, sum]);
+      });
       var numbering=computeSborkaNumbering(grp);
       var orderMap={}; numbering.forEach(function(x){ orderMap[x.f.name]={num:x.num, newName:x.newName}; });
-      var bundle=buildLegacyBundleFromFiles(grp, svodAoa, orderMap);
+      var bundle=buildLegacyBundleFromFiles(grp, checkForm, orderMap, formMps);
       // Раскладываем в папку юрлица
       zip.file(legal+'/'+svodName, svodBuf);
       numbering.forEach(function(x){ zip.file(legal+'/сборки_пронумерованные/'+x.newName, x.f.buf); });
@@ -3341,7 +3369,7 @@ function obshConsolidatedToWb(items,legal,orderNo){
   var borderDark={top:{style:'thin',color:{rgb:'FF1F2937'}},bottom:{style:'thin',color:{rgb:'FF1F2937'}},left:{style:'thin',color:{rgb:'FF1F2937'}},right:{style:'thin',color:{rgb:'FF1F2937'}}};
   var titleStyle={font:{bold:true,sz:16,color:{rgb:'FFFFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'FF111827'}},alignment:{horizontal:'center',vertical:'center'}};
   var metricLabel={font:{bold:true,color:{rgb:'FF374151'}},fill:{patternType:'solid',fgColor:{rgb:'FFF3F4F6'}},alignment:{horizontal:'center',vertical:'center'},border:borderThin};
-  var metricValue={font:{bold:true,color:{rgb:'FFB45309'}},fill:{patternType:'solid',fgColor:{rgb:'FFFFFBEB'}},alignment:{horizontal:'center',vertical:'center'},border:borderThin};
+  var metricValue={font:{bold:true,color:{rgb:'FFB45309'}},fill:{patternType:'solid',fgColor:{rgb:'FFFFFBEB'}},alignment:{horizontal:'center',vertical:'center'},border:borderThin,numFmt:'0.00'};
   var headerBase={font:{bold:true,color:{rgb:'FFFFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'FF000000'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:borderDark};
   var headerQty={font:{bold:true,color:{rgb:'FF111827'}},fill:{patternType:'solid',fgColor:{rgb:'FF92D050'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:borderDark};
   var headerMarket={font:{bold:true,color:{rgb:'FFFFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'FF1D4ED8'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:borderDark};
@@ -3350,7 +3378,7 @@ function obshConsolidatedToWb(items,legal,orderNo){
   var bodyNum={border:borderThin,alignment:{horizontal:'right',vertical:'center'},numFmt:wholeNumFmt};
   var bodyQty={border:borderThin,fill:{patternType:'solid',fgColor:{rgb:'FFF0FDF4'}},alignment:{horizontal:'right',vertical:'center'},numFmt:wholeNumFmt};
   var bodyCaps={border:borderThin,fill:{patternType:'solid',fgColor:{rgb:'FFF5F3FF'}},alignment:{horizontal:'right',vertical:'center'},numFmt:wholeNumFmt};
-  var totalStyle={font:{bold:true,color:{rgb:'FFFFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'FF111827'}},alignment:{horizontal:'right',vertical:'center'},border:borderDark,numFmt:wholeNumFmt};
+  var totalStyle={font:{bold:true,color:{rgb:'FFFFFFFF'}},fill:{patternType:'solid',fgColor:{rgb:'FF111827'}},alignment:{horizontal:'right',vertical:'center'},border:borderDark,numFmt:'0.00'};
 
   // Title and metric strip
   if(ws['A1']) ws['A1'].s=titleStyle;
