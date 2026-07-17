@@ -422,7 +422,7 @@ body::before{
         <label class="menu-setting" style="display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border:1px solid var(--border,#e5e7eb);border-radius:12px;cursor:pointer;font-weight:600">
           <input type="checkbox" id="evenRoundingChk" onchange="setEvenRounding(this.checked)" style="width:18px;height:18px;cursor:pointer">
           <span class="bi">➗</span>
-          <span style="flex:1">Округлять количество до чётного <span style="font-weight:400;color:var(--dim,#9ca3af)">(в сборках, кроме позиций по 1 шт)</span></span>
+          <span style="flex:1">Округлять количество вниз <span style="font-weight:400;color:var(--dim,#9ca3af)">(в сборках: >кванта → до целых коробов, иначе до чётного; 1 шт не трогаем)</span></span>
         </label>
       </div>
 
@@ -1615,12 +1615,21 @@ function evenDown(q){
   if(Number.isInteger(n) && n%2===1 && n!==1) return n-1;
   return n;
 }
+// Округление кол-ва: 1 шт → 1; больше кванта (кратности) → вниз до целых коробов;
+// иначе → вниз до чётного. Квант — кратность короба по площадке (ВБ/обычная).
+function quantRound(q, krat){
+  var n=numVal(q);
+  if(!Number.isInteger(n)) return n;
+  if(n===1) return 1;
+  if(krat>0 && n>krat) return Math.floor(n/krat)*krat; // до целых коробов
+  return (n%2===1)?n-1:n;                               // до чётного
+}
 function applySborkaView(rows){
   if(!rows||!rows.length) return rows||[];
   rows.forEach(function(r){
-    var q=roundingOn()?evenDown(r['Итого кол-во']):numVal(r['Итого кол-во']);
-    r['Итого кол-во']=q;
     var krat=numVal(r['Кратность короба']);
+    var q=roundingOn()?quantRound(r['Итого кол-во'],krat):numVal(r['Итого кол-во']);
+    r['Итого кол-во']=q;
     r['Кол-во коробов']=krat>0?Math.round((q/krat)*100)/100:'';
   });
   rows.sort(function(a,b){
@@ -1678,7 +1687,9 @@ function parseMultiBlockOrderToSborkas(wb,bdRows,srcName){
         var bd=idx.byCode[code]||idx.byBarcode[code];
         if(!bd) return;
         var type=cur.label.mp;
-        var krat=getKratnostByMarketplace(bd,type==='WildBerries'?'WildBerries':'YM');
+        // Квант берём ИЗ ФАЙЛА (человек уже посчитал заказ под верный квант площадки),
+        // и только если его нет — из БД по площадке.
+        var krat=(it.krat&&it.krat>0)?it.krat:getKratnostByMarketplace(bd,type==='WildBerries'?'WildBerries':'YM');
         var qty=cleanQty(it.qty);
         built.push({
           'Код 1С': normCell(bdGet(bd,['Код 1С']))||code,
@@ -1705,19 +1716,26 @@ function parseMultiBlockOrderToSborkas(wb,bdRows,srcName){
       var row=raw[i]||[];
       var a=normCell(row[0]);
       var lbl=matchBlockLabel(a);
-      if(lbl){ flush(); cur={label:lbl, qtyCol:3, items:[], seenHeader:false}; continue; }
+      if(lbl){ flush(); cur={label:lbl, qtyCol:3, kratCol:2, items:[], seenHeader:false}; continue; }
       if(!cur) continue;
       if(String(a)==='Код 1С'){
-        // строка-шапка: ищем колонку количества по слову «заказ», иначе D
-        var qc=-1;
-        for(var c=0;c<row.length;c++){ if(/заказ/i.test(normCell(row[c]))){qc=c;break;} }
+        // строка-шапка: колонка количества по слову «заказ» (иначе D),
+        // колонка кванта по слову «крат» (иначе C) — в файле уже верный квант площадки
+        var qc=-1, kc=-1;
+        for(var c=0;c<row.length;c++){
+          var h=normCell(row[c]);
+          if(qc<0 && /заказ/i.test(h)) qc=c;
+          if(kc<0 && /крат/i.test(h)) kc=c;
+        }
         cur.qtyCol = qc>=0?qc:3;
+        cur.kratCol = kc>=0?kc:2;
         cur.seenHeader=true;
         continue;
       }
       if(isSborkaCode(a)){
         var qty=numVal(row[cur.qtyCol]);
-        cur.items.push({code:normCell(a), qty:qty});
+        var kr=numVal(row[cur.kratCol]);
+        cur.items.push({code:normCell(a), qty:qty, krat:kr});
       }
     }
     flush();
@@ -1790,14 +1808,15 @@ function sborkaToWb(rows,baseName){
     var haddr=XLSX.utils.encode_cell({r:1,c:hc});
     if(ws[haddr]) ws[haddr].s=headerStyle;
   }
-  // Числовой формат для количества / кратности / коробов
+  // Числовой формат: D/E — целые, F (коробов) — 0,00
   for(var r=3;r<=aoa.length;r++){
-    ['D','E','F'].forEach(function(c){var cell=ws[c+r]; if(cell) cell.z=wholeNumFmt;});
+    ['D','E'].forEach(function(c){var cell=ws[c+r]; if(cell) cell.z=wholeNumFmt;});
+    var fc0=ws['F'+r]; if(fc0) fc0.z='0.00';
     // Колонка F (Кол-во коробов) — живой формулой =D/E, когда кратность задана
     var ecell=ws['E'+r];
     if(ecell && typeof ecell.v==='number' && ecell.v!==0){
       var fcell=ws['F'+r]||(ws['F'+r]={t:'n'});
-      fcell.f='D'+r+'/E'+r; fcell.z=wholeNumFmt;
+      fcell.f='D'+r+'/E'+r; fcell.z='0.00';
     }
   }
   XLSX.utils.book_append_sheet(wb,ws,safeSheetName('Сборочный лист'));
