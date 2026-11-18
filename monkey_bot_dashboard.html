@@ -8,7 +8,7 @@
   var PROXY='http://localhost:8765/__proxy__';
   if(!window.fetch) return;
   var _f=window.fetch.bind(window);
-  function ext(u){ return /^https?:\/\//i.test(u) && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(u); }
+  function ext(u){ return /^https?:\/\//i.test(u) && !/^https?:\/\/(localhost|127\.0\.0\.1)/i.test(u) && !/^https?:\/\/[^/]*(googleapis|google)\.com/i.test(u); }
   window.fetch=function(input,init){
     try{
       var url=(typeof input==='string')?input:(input&&input.url)||'';
@@ -357,7 +357,7 @@ body::before{
   </div>
   <div class="login-box">
     <div class="l-logo"><span class="mk">MONKEY</span>🐒<span class="mk">BOT</span></div>
-    <div class="l-sub">система сборки заказов · v2.1.5</div>
+    <div class="l-sub">система сборки заказов · v2.3.2</div>
 
 
 
@@ -377,7 +377,7 @@ body::before{
 <!-- ════ APP ════ -->
 <div class="app" id="app">
   <div class="topbar">
-    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.1.5</span></div>
+    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.3.2</span></div>
     <div class="tab-row">
       <button class="tb active" onclick="showTab('order',this);goStep('menu')">Главная</button>
       <button class="tb" onclick="showTab('order',this);goStep('platform')">Создать заказ</button>
@@ -395,7 +395,7 @@ body::before{
   </div>
 
   <div class="content">
-    <div class="build-watermark">v2.1.5</div>
+    <div class="build-watermark">v2.3.2</div>
 
     <!-- ══ TAB: ORDER ══ -->
     <div class="panel active" id="tab-order">
@@ -471,10 +471,10 @@ body::before{
         <div class="step-sub" id="uploadSub">Прикрепите Excel-файл сборки заказа (формат 1С)</div>
         <div class="dz" id="dropZone"
              ondragover="dzOver(event,true)" ondragleave="dzOver(event,false)" ondrop="dzDrop(event)">
-          <input type="file" accept=".xlsx,.xls" id="fileInput" onchange="fileChosen(this)">
+          <input type="file" accept=".xlsx,.xls" multiple id="fileInput" onchange="fileChosen(this)">
           <span class="dz-icon">📂</span>
           <div class="dz-title">ПЕРЕТАЩИТЕ ФАЙЛ</div>
-          <div class="dz-sub">или нажмите для выбора · .xlsx / .xls</div>
+          <div class="dz-sub">или нажмите · можно несколько файлов · .xlsx / .xls</div>
           <div class="dz-chosen" id="dzChosen"></div>
         </div>
         <label class="mix-opt" id="ozonMixWrap">
@@ -485,6 +485,23 @@ body::before{
             <span class="mix-opt-sub">Включите, если в Ozon коробах разные количества: 16 / 5 / 2 / 1. Кратность из БД не применяется.</span>
           </span>
         </label>
+        <div id="batchOpts" style="display:none;margin:12px 0 2px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+            <span style="font-size:12px;color:var(--dim)">Что скачать:</span>
+            <div id="batchOutSeg" style="display:inline-flex;gap:6px">
+              <button type="button" class="bo-opt" data-out="order" onclick="setBatchOut('order',this)" style="padding:5px 12px;border:1px solid var(--mk);border-radius:8px;background:var(--mk);color:#fff;font-size:12px;cursor:pointer">Заказники</button>
+              <button type="button" class="bo-opt" data-out="shk" onclick="setBatchOut('shk',this)" style="padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--dim);font-size:12px;cursor:pointer">ШК</button>
+              <button type="button" class="bo-opt" data-out="both" onclick="setBatchOut('both',this)" style="padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--dim);font-size:12px;cursor:pointer">Оба</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--dim)">Площадка:</span>
+            <div id="batchPlatSeg" style="display:inline-flex;gap:6px">
+              <button type="button" class="bp-opt" data-mode="selected" onclick="setBatchPlatMode('selected',this)" style="padding:5px 12px;border:1px solid var(--mk);border-radius:8px;background:var(--mk);color:#fff;font-size:12px;cursor:pointer">Выбранная</button>
+              <button type="button" class="bp-opt" data-mode="auto" onclick="setBatchPlatMode('auto',this)" style="padding:5px 12px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--dim);font-size:12px;cursor:pointer">Определять по файлу</button>
+            </div>
+          </div>
+        </div>
         <button class="proc-btn" id="procBtn" onclick="processOrder()">ОБРАБОТАТЬ →</button>
       </div>
 
@@ -804,6 +821,7 @@ var S = {
   bdName: null,
   platform: null,
   orderFile: null,
+  orderFiles: [],
   orderFileName: '',
   reverseFile: null,
   reverseFileName: '',
@@ -818,6 +836,116 @@ var S = {
 
 // Учётные данные (менять здесь)
 var USERS = {Singlecup:{pass:'Coffeepod',admin:true}};
+
+// ── БД: сохранение между сессиями (localStorage) + общая версия (Google-таблица, лист «БД») ──
+var MK_BD_LS='monkey_bd_v1';
+var MK_BD_SHEET='БД';   // лист с БД в вашей Google-таблице
+var MK_BD_SPREADSHEET='1kc4rhAdM88TJGUURuG7Qo6keq5OlzkoXpCqVTw_8jS0';   // ОТДЕЛЬНАЯ таблица только под БД (databasesccoffee@gmail.com, открыта по ссылке на чтение)
+var _mkBdTs=0;                 // метка времени текущей БД в памяти
+function mkSaveBdLocal(){
+  try{ if(S.bdRows&&S.bdRows.length){ _mkBdTs=Date.now(); localStorage.setItem(MK_BD_LS,JSON.stringify({ts:_mkBdTs,name:S.bdName||'БД кофе.xlsx',rows:S.bdRows})); return true; } }catch(e){ console.warn('mkSaveBdLocal',e); }
+  return false;
+}
+function mkLoadBdLocal(){
+  try{ var r=localStorage.getItem(MK_BD_LS); if(!r) return null; var d=JSON.parse(r); if(d&&Array.isArray(d.rows)&&d.rows.length) return d; }catch(e){}
+  return null;
+}
+function mkApplyBd(d){
+  if(!d||!Array.isArray(d.rows)||!d.rows.length) return false;
+  S.bdRows=d.rows; S.bdName=d.name||'БД кофе.xlsx'; _mkBdTs=+d.ts||Date.now();
+  try{ updateDbPill(); }catch(e){}
+  try{ if(document.getElementById('tab-db')&&document.getElementById('tab-db').classList.contains('active')) renderDbSection(); }catch(e){}
+  return true;
+}
+// Фоновая синхронизация БД из общей Google-таблицы (лист «БД»).
+async function mkRefreshSharedBd(){ try{ await mkSyncBdFromSheet(true); }catch(e){} }
+// Сырой CSV → массив массивов (учитывает кавычки, запятые и переносы внутри ячеек).
+function mkCsvRaw(t){
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<t.length;i++){ var ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch==='"') q=true;
+    else if(ch===','){ row.push(cur); cur=''; }
+    else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&t[i+1]==='\n')i++; row.push(cur); cur=''; if(row.length>1||row[0]!=='') rows.push(row); row=[]; }
+    else cur+=ch;
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+// Чтение БД из листа «БД» публично (gviz CSV) — без входа в Google, если таблица открыта по ссылке.
+async function mkReadBdFromSheet(){
+  try{
+    var url='https://docs.google.com/spreadsheets/d/'+MK_BD_SPREADSHEET+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(MK_BD_SHEET)+'&_='+Date.now();
+    var r=await fetch(url,{cache:'no-store'});
+    if(!r||!r.ok) return null;
+    var t=await r.text();
+    if(!t||t.charAt(0)==='<') return null;          // HTML — нет доступа или нет листа «БД»
+    var rows=mkCsvRaw(t);
+    if(!rows||rows.length<2) return null;
+    var hdr=rows[0].map(function(x){return String(x==null?'':x).trim();});
+    var out=[];
+    for(var i=1;i<rows.length;i++){
+      var rr=rows[i]; if(!rr||!rr.join('').trim()) continue;
+      var o={}; hdr.forEach(function(hh,j){ if(hh) o[hh]=(rr[j]!=null?String(rr[j]):''); });
+      out.push(o);
+    }
+    return out.length?out:null;
+  }catch(e){ return null; }
+}
+// Применить БД из таблицы в приложение + локальный кэш.
+async function mkSyncBdFromSheet(silent){
+  var rows=null;
+  try{ rows=await mkReadBdFromSheet(); }catch(e){}
+  if(rows&&rows.length){
+    S.bdRows=rows; S.bdName='БД кофе.xlsx'; _mkBdTs=Date.now();
+    try{ localStorage.setItem(MK_BD_LS,JSON.stringify({ts:_mkBdTs,name:S.bdName,rows:rows})); }catch(e){}
+    try{ updateDbPill(); }catch(e){}
+    try{ if(document.getElementById('tab-db')&&document.getElementById('tab-db').classList.contains('active')) renderDbSection(); }catch(e){}
+    if(!silent) toast('🔄 БД из Google: '+rows.length+' поз.','ok');
+    return true;
+  }
+  if(!silent) toast('Не удалось прочитать БД из Google. Проверьте: таблица открыта «по ссылке» и в ней есть лист «БД».','warn');
+  return false;
+}
+// Запрос к ОТДЕЛЬНОЙ таблице БД (MK_BD_SPREADSHEET), не к таблице проектов.
+async function sheetsRequestBd(method,path,body){
+  if(!gsheetsToken) throw new Error('нет входа в Google');
+  var url='https://sheets.googleapis.com/v4/spreadsheets/'+MK_BD_SPREADSHEET+path;
+  var opts={method:method,headers:{'Authorization':'Bearer '+gsheetsToken,'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  var r=await fetch(url,opts);
+  if(r.status===401){ gsheetsToken=null; try{localStorage.removeItem(GSHEETS_LS_TOKEN);}catch(e){} try{gsheetsUpdateUI(false);}catch(e){} throw new Error('Токен истёк — войдите снова'); }
+  if(!r.ok) throw new Error('Sheets API '+r.status+': '+await r.text());
+  return r.json();
+}
+// Гарантируем лист «БД» (нужен вход в Google).
+async function mkEnsureBdSheet(){
+  var meta=await sheetsRequestBd('GET','?fields=sheets.properties');
+  var exist=(meta.sheets||[]).map(function(s){return s.properties.title;});
+  if(!exist.includes(MK_BD_SHEET)){
+    await sheetsRequestBd('POST',':batchUpdate',{requests:[{addSheet:{properties:{title:MK_BD_SHEET}}}]});
+  }
+}
+// Запись текущей БД в лист «БД» (нужен вход в Google).
+async function mkWriteBdToSheet(){
+  if(!gsheetsToken) throw new Error('нет входа в Google');
+  if(!S.bdRows||!S.bdRows.length) throw new Error('БД пустая');
+  await mkEnsureBdSheet();
+  var keys=[],seen={};
+  S.bdRows.forEach(function(r){ Object.keys(r).forEach(function(k){ if(!seen[k]){seen[k]=1;keys.push(k);} }); });
+  var values=[keys].concat(S.bdRows.map(function(r){ return keys.map(function(k){ var v=r[k]; return v==null?'':String(v); }); }));
+  await sheetsRequestBd('POST','/values/'+encodeURIComponent(MK_BD_SHEET)+'!A1:ZZ:clear',{});
+  await sheetsRequestBd('PUT','/values/'+encodeURIComponent(MK_BD_SHEET)+'!A1?valueInputOption=RAW',{values:values});
+}
+// Сохранить БД в общую таблицу. silent=true — без спиннера/варнингов (авто-пуш после обновления).
+async function mkPushBd(silent){
+  if(!gsheetsToken){ if(!silent) toast('Сначала войдите в Google: кнопка «Sheets» вверху','warn'); return false; }
+  if(!silent) showSpinner('Сохраняем БД в Google…');
+  try{ await mkWriteBdToSheet(); toast('☁ БД сохранена в Google — её увидят все по ссылке','ok'); return true; }
+  catch(e){ toast('❌ Google: '+(e&&e.message||e),'err'); return false; }
+  finally{ if(!silent) hideSpinner(); }
+}
+
 
 // ── GOOGLE SHEETS ──
 var GSHEETS_CLIENT_ID     = '821458481833-6llvrgb0to8joig786sht6lr7dn6aesf.apps.googleusercontent.com';
@@ -853,6 +981,7 @@ function gsheetsSignIn(){
         allData=null;
         (async function(){
           await dataEnsureLoaded(true);
+          try{ await mkSyncBdFromSheet(true); }catch(e){}
           if(document.getElementById('tab-projects') &&
              document.getElementById('tab-projects').classList.contains('active')){
             await projRender(); await resRender();
@@ -1320,9 +1449,10 @@ function prepUpload(){
   goStep('upload');
 }
 function resetDz(){
-  S.orderFile=null;
+  S.orderFile=null; S.orderFiles=[];
   document.getElementById('dzChosen').style.display='none';
-  document.getElementById('procBtn').classList.remove('show');
+  var pb=document.getElementById('procBtn'); if(pb){ pb.classList.remove('show'); pb.textContent='ОБРАБОТАТЬ →'; }
+  var bo=document.getElementById('batchOpts'); if(bo) bo.style.display='none';
   document.getElementById('fileInput').value='';
 }
 function updateOzonMixOption(){
@@ -1337,23 +1467,36 @@ function updateOzonMixOption(){
 function dzOver(e,on){e.preventDefault();document.getElementById('dropZone').classList.toggle('dragover',on);}
 function dzDrop(e){
   e.preventDefault();document.getElementById('dropZone').classList.remove('dragover');
-  if(e.dataTransfer.files[0]) setOrderFile(e.dataTransfer.files[0]);
+  if(e.dataTransfer.files&&e.dataTransfer.files.length) setOrderFiles(e.dataTransfer.files);
 }
-function fileChosen(inp){if(inp.files[0])setOrderFile(inp.files[0]);}
-function setOrderFile(f){
-  S.orderFile=f; S.orderFileName=f.name.replace(/\.[^.]+$/,'').replace('Сборка_заказа_','');
+function fileChosen(inp){ if(inp.files&&inp.files.length) setOrderFiles(inp.files); }
+function setOrderFile(f){ setOrderFiles([f]); }
+function setOrderFiles(fileList){
+  var files=Array.prototype.slice.call(fileList||[]).filter(function(f){return /\.xlsx?$/i.test(f.name);});
+  if(!files.length){ toast('Выберите Excel-файлы .xlsx / .xls','err'); return; }
+  S.orderFiles=files;
+  S.orderFile=files[0];
+  S.orderFileName=files[0].name.replace(/\.[^.]+$/,'').replace('Сборка_заказа_','');
   var ch=document.getElementById('dzChosen');
-  ch.textContent='📎 '+f.name+' ('+(f.size/1024).toFixed(0)+' KB)';
+  if(files.length===1){
+    ch.textContent='📎 '+files[0].name+' ('+(files[0].size/1024).toFixed(0)+' KB)';
+  } else {
+    var kb=files.reduce(function(s,f){return s+f.size/1024;},0);
+    ch.textContent='📎 '+files.length+' файлов · '+kb.toFixed(0)+' KB: '+files.slice(0,4).map(function(f){return f.name;}).join(', ')+(files.length>4?'…':'');
+  }
   ch.style.display='block';
-  document.getElementById('procBtn').classList.add('show');
+  var bo=document.getElementById('batchOpts'); if(bo) bo.style.display=files.length>1?'':'none';
+  var pb=document.getElementById('procBtn'); if(pb){ pb.classList.add('show'); pb.textContent=files.length>1?('ОБРАБОТАТЬ '+files.length+' ФАЙЛОВ →'):'ОБРАБОТАТЬ →'; }
 }
 
 async function processOrder(){
-  if(!S.orderFile){toast('Выберите файл','err');return;}
+  var files=(S.orderFiles&&S.orderFiles.length)?S.orderFiles:(S.orderFile?[S.orderFile]:[]);
+  if(!files.length){toast('Выберите файл','err');return;}
   if(!S.bdRows){toast('БД не загружена','err');return;}
+  if(files.length>1){ return processOrderBatch(files); }
   showSpinner('Обрабатываем '+S.platform+'…');
   try{
-    var buf=await S.orderFile.arrayBuffer();
+    var buf=await files[0].arrayBuffer();
     var opts={ozonMixBoxes:S.platform==='OzonBox' && !!(document.getElementById('ozonMixBoxes')&&document.getElementById('ozonMixBoxes').checked)};
     var result=runPipeline(S.platform,buf,S.bdRows,opts);
     renderResult(result,S.orderFileName);
@@ -1363,6 +1506,104 @@ async function processOrder(){
     toast('❌ '+e.message,'err');
     console.error(e);
   }finally{hideSpinner();}
+}
+
+// ── Пакетная обработка сборок 1С → заказники/ШК по каждому файлу ──
+var _batchOut='order';          // order | shk | both
+var _batchPlatMode='selected';  // selected | auto
+function setBatchOut(v,btn){ _batchOut=v; _segPick('batchOutSeg',btn); }
+function setBatchPlatMode(v,btn){ _batchPlatMode=v; _segPick('batchPlatSeg',btn); }
+function _segPick(segId,btn){
+  var seg=document.getElementById(segId); if(!seg) return;
+  Array.prototype.forEach.call(seg.querySelectorAll('button'),function(b){
+    var on=b===btn; b.style.background=on?'var(--mk)':'none'; b.style.color=on?'#fff':'var(--dim)'; b.style.borderColor=on?'var(--mk)':'var(--border)';
+  });
+}
+// Карта имён файлов прямого потока (как в renderResult, но с базой на каждый файл)
+var _FWD_PREFIX_MAP={
+  wb:          function(n,b){return n==='ШК'?'ШК_'+b+'.xlsx':'Заказ_'+b+'.xlsx';},
+  ozon_box:    function(n,b){return n==='ШК'?'ШК_'+b+'.xlsx':'Заказ_'+b+'_коробы.xlsx';},
+  ozon_palette:function(n,b){return n==='palette'?'palette_'+b+'.xlsx':'Заказ_'+b+'_палеты.xlsx';},
+  ym:          function(n,b){return 'Заказ_'+b+'.xlsx';},
+  sber:        function(n,b){return 'Заказ_'+b+'.xlsx';}
+};
+// Площадка прямого потока по имени/содержимому файла сборки 1С
+function detectForwardPlatform(fileName,buf){
+  var p='';
+  try{ p=legacyPlatformFromName(fileName)||''; }catch(e){}
+  if(!p && buf){ try{ p=legacyPlatformFromContent({buf:buf})||''; }catch(e){} }
+  if(p==='Ozon') return 'OzonBox';          // из сборки 1С короба/паллеты не различить → по умолчанию коробами
+  if(p==='WildBerries') return 'WildBerries';
+  if(p==='YM') return 'YM';
+  if(p==='SBER') return 'SBER';
+  return '';
+}
+function forwardBaseName(name){
+  return String(name||'заказ').replace(/\.[^.]+$/,'').replace(/^Сборка[_\s-]*заказа[_\s-]*/i,'').trim()||'заказ';
+}
+async function processOrderBatch(files){
+  var wantOrder=(_batchOut==='order'||_batchOut==='both');
+  var wantShk=(_batchOut==='shk'||_batchOut==='both');
+  showSpinner('Пакетно обрабатываем сборки…');
+  try{
+    var outputs=[];   // {fn, wb}
+    var skipped=[];
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      document.getElementById('spinTxt').textContent='Обрабатываем '+(i+1)+'/'+files.length+': '+f.name;
+      var buf=await f.arrayBuffer();
+      var plat=S.platform;
+      if(_batchPlatMode==='auto'){ var det=detectForwardPlatform(f.name,buf); plat=det||S.platform; }
+      if(!plat){ skipped.push(f.name+' — площадка не распознана'); continue; }
+      var opts={ozonMixBoxes:plat==='OzonBox' && !!(document.getElementById('ozonMixBoxes')&&document.getElementById('ozonMixBoxes').checked)};
+      var result;
+      try{ result=runPipeline(plat,buf,S.bdRows,opts); }
+      catch(e){ skipped.push(f.name+' — '+e.message); continue; }
+      var base=forwardBaseName(f.name);
+      var pm=_FWD_PREFIX_MAP[result.type];
+      result.files.forEach(function(file){
+        var isShk=(file.name==='ШК'||file.name==='palette');
+        var isOrder=(file.name==='Заказ');
+        if(isOrder&&!wantOrder) return;
+        if(isShk&&!wantShk) return;
+        var fn=pm?pm(file.name,base):(file.name+'_'+base+'.xlsx');
+        var wb=file.multisheet?sberToWb(file.data):rowsToWb(file.data);
+        outputs.push({fn:fn,wb:wb});
+      });
+    }
+    renderOrderBatchResult(outputs,skipped,files.length);
+    goStep('result');
+    toast(skipped.length?('Готово, пропущено: '+skipped.length):'✅ Готово!', skipped.length?'inf':'ok');
+  }catch(e){
+    toast('❌ '+e.message,'err'); console.error(e);
+  }finally{hideSpinner();}
+}
+function renderOrderBatchResult(outputs,skipped,totalFiles){
+  var btns=document.getElementById('dlBtns');
+  var sub=document.getElementById('rcSub');
+  var skipHtml=(skipped&&skipped.length)?('<br><span style="color:var(--dim);font-size:12px">Пропущено ('+skipped.length+'): '+skipped.map(function(s){return projEscape(s);}).join('; ')+'</span>'):'';
+  if(!outputs.length){ btns.innerHTML=''; sub.innerHTML='Нет файлов на выходе (проверьте «Что скачать» — для ЯМ/Сбер ШК не формируется).'+skipHtml; return; }
+  var links=outputs.map(function(o,idx){
+    var url=URL.createObjectURL(wbToBlob(o.wb));
+    return '<a class="dl-btn" href="'+url+'" download="'+o.fn+'">⬇ '+(idx+1)+'. '+o.fn+'</a>';
+  }).join(' ');
+  var zipId='orderZipBtn_'+Date.now();
+  window['_orderZipData_'+zipId]=outputs;
+  links+=' <button class="dl-btn zip" id="'+zipId+'" onclick="downloadOrderZip(this)">📦 ZIP всё</button>';
+  btns.innerHTML=links;
+  sub.innerHTML='Готово файлов: '+outputs.length+' из '+(totalFiles||0)+' сборок'+skipHtml;
+}
+async function downloadOrderZip(btn){
+  var data=window['_orderZipData_'+btn.id]; if(!data||!data.length) return;
+  btn.textContent='⏳ Архивирую…'; btn.disabled=true;
+  try{
+    var zip=new JSZip();
+    data.forEach(function(o){ zip.file(o.fn, XLSX.write(o.wb,{type:'array',bookType:'xlsx'})); });
+    var content=await zip.generateAsync({type:'blob'});
+    var url=URL.createObjectURL(content);
+    var a=document.createElement('a'); a.href=url; a.download='заказники_пачкой.zip';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } finally { btn.textContent='📦 ZIP всё'; btn.disabled=false; }
 }
 
 
@@ -3485,10 +3726,13 @@ function renderDbSection(){
     +'</div>'
 
     +'<button class="db-action primary" onclick="adminGetDb()">⬇ СКАЧАТЬ БД КОФЕ.XLSX</button>'
+    +'<button class="db-action" onclick="mkPushBd(false)" style="margin-top:10px">☁ СОХРАНИТЬ БД В GOOGLE (ДЛЯ ВСЕХ)</button>'
+    +'<button class="db-action" onclick="mkSyncBdFromSheet(false)" style="margin-top:10px">🔄 СИНХРОНИЗИРОВАТЬ ИЗ GOOGLE</button>'
+    +'<div class="step-sub" style="margin:8px 2px 0;font-size:12px;line-height:1.5">💾 Загруженная БД сохраняется в браузере и не слетает после перезагрузки.<br>☁ Чтобы новую БД увидели <b>все по ссылке</b>: нажмите вверху <b>«Sheets»</b> и войдите в Google один раз, затем «Сохранить БД в Google». Данные лягут в лист «БД» вашей таблицы, и у всех при открытии подтянется свежая версия.<br>'+((typeof gsheetsToken!=='undefined'&&gsheetsToken)?'<span style=\'color:var(--ok)\'>✓ Google подключён — можно сохранять.</span>':'<span style=\'color:var(--dim)\'>Google пока не подключён — нажмите «Sheets» вверху.</span>')+'</div>'
 
     +'<div class="db-card">'
     +'<div class="db-card-title" style="margin-bottom:10px">🔄 ОБНОВИТЬ БД</div>'
-    +'<div class="step-sub" style="margin-bottom:14px">Загрузите Excel с новыми позициями. Дубли по «Код 1С» обновятся (keep=last). Изменения действуют в текущей сессии.</div>'
+    +'<div class="step-sub" style="margin-bottom:14px">Загрузите Excel с новыми позициями. Дубли по «Код 1С» обновятся (keep=last). Сохранится в этом браузере автоматически; чтобы раздать всем — «Скачать для сайта» ниже.</div>'
     +'<div class="dz" style="padding:24px" id="dbDz"'
     +' ondragover="event.preventDefault();this.classList.add(\'dragover\')" ondragleave="this.classList.remove(\'dragover\')" ondrop="dbFileDrop(event)">'
     +'<input type="file" accept=".xlsx,.xls" id="dbFileInput" onchange="dbFileChosen(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%">'
@@ -3533,6 +3777,8 @@ function applyDbUpdate(){
       }
       var before=S.bdRows?S.bdRows.length:0;
       S.bdRows=deduped;
+      mkSaveBdLocal();
+      try{ mkPushBd(true); }catch(e){}
       updateDbPill();
       renderDbSection();
       toast('✅ БД обновлена: '+deduped.length+' строк (было '+before+', добавлено '+newRows.length+')','ok');
@@ -3604,15 +3850,23 @@ function doLogout(){
 }
 
 function loadBuiltinBd(){
-  try{
-    var binStr = atob(BD_B64);
-    var bytes = new Uint8Array(binStr.length);
-    for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
-    var wb = XLSX.read(bytes.buffer,{type:'array'});
-    var ws = wb.Sheets[wb.SheetNames[0]];
-    S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
-    S.bdName = 'БД кофе.xlsx';
-  }catch(e){ console.error('BD load error',e); }
+  // 1) локальный кэш (переживает перезагрузку), иначе вшитая БД
+  var _lb=(typeof mkLoadBdLocal==='function')?mkLoadBdLocal():null;
+  if(_lb){ S.bdRows=_lb.rows; S.bdName=_lb.name||'БД кофе.xlsx'; _mkBdTs=+_lb.ts||0; }
+  else {
+    try{
+      var binStr = atob(BD_B64);
+      var bytes = new Uint8Array(binStr.length);
+      for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
+      var wb = XLSX.read(bytes.buffer,{type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      S.bdName = 'БД кофе.xlsx';
+      _mkBdTs=0;
+    }catch(e){ console.error('BD load error',e); }
+  }
+  // 2) общая версия — подтянуть в фоне, если она новее
+  if(typeof mkRefreshSharedBd==='function'){ try{ mkRefreshSharedBd(); }catch(e){} }
 }
 
 function showApp(){
@@ -3687,15 +3941,23 @@ function doLogout(){
 }
 
 function loadBuiltinBd(){
-  try{
-    var binStr = atob(BD_B64);
-    var bytes = new Uint8Array(binStr.length);
-    for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
-    var wb = XLSX.read(bytes.buffer,{type:'array'});
-    var ws = wb.Sheets[wb.SheetNames[0]];
-    S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
-    S.bdName = 'БД кофе.xlsx';
-  }catch(e){ console.error('BD load error',e); }
+  // 1) локальный кэш (переживает перезагрузку), иначе вшитая БД
+  var _lb=(typeof mkLoadBdLocal==='function')?mkLoadBdLocal():null;
+  if(_lb){ S.bdRows=_lb.rows; S.bdName=_lb.name||'БД кофе.xlsx'; _mkBdTs=+_lb.ts||0; }
+  else {
+    try{
+      var binStr = atob(BD_B64);
+      var bytes = new Uint8Array(binStr.length);
+      for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
+      var wb = XLSX.read(bytes.buffer,{type:'array'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      S.bdName = 'БД кофе.xlsx';
+      _mkBdTs=0;
+    }catch(e){ console.error('BD load error',e); }
+  }
+  // 2) общая версия — подтянуть в фоне, если она новее
+  if(typeof mkRefreshSharedBd==='function'){ try{ mkRefreshSharedBd(); }catch(e){} }
 }
 
 function showApp(){
