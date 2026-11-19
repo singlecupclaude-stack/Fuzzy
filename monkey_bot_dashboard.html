@@ -357,7 +357,7 @@ body::before{
   </div>
   <div class="login-box">
     <div class="l-logo"><span class="mk">MONKEY</span>🐒<span class="mk">BOT</span></div>
-    <div class="l-sub">система сборки заказов · v2.3.3</div>
+    <div class="l-sub">система сборки заказов · v2.3.4</div>
 
 
 
@@ -377,7 +377,7 @@ body::before{
 <!-- ════ APP ════ -->
 <div class="app" id="app">
   <div class="topbar">
-    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.3.3</span></div>
+    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.3.4</span></div>
     <div class="tab-row">
       <button class="tb active" onclick="showTab('order',this);goStep('menu')">Главная</button>
       <button class="tb" onclick="showTab('order',this);goStep('platform')">Создать заказ</button>
@@ -395,7 +395,7 @@ body::before{
   </div>
 
   <div class="content">
-    <div class="build-watermark">v2.3.3</div>
+    <div class="build-watermark">v2.3.4</div>
 
     <!-- ══ TAB: ORDER ══ -->
     <div class="panel active" id="tab-order">
@@ -872,6 +872,17 @@ function mkCsvRaw(t){
   }
   if(cur!==''||row.length){ row.push(cur); rows.push(row); }
   return rows;
+}
+// Убрать колонки без имени / служебные __EMPTY (бывают в Excel, где у столбца пустой заголовок),
+// чтобы в общую таблицу не попадал мусор. Именованные колонки остаются как есть.
+function mkStripEmptyCols(rows){
+  if(!rows||!rows.length) return rows;
+  return rows.map(function(r){
+    var o={}; Object.keys(r).forEach(function(k){
+      var kk=String(k==null?'':k).trim();
+      if(kk && kk.indexOf('__EMPTY')!==0) o[k]=r[k];
+    }); return o;
+  });
 }
 // Чтение БД из листа «БД» публично (gviz CSV) — без входа в Google, если таблица открыта по ссылке.
 async function mkReadBdFromSheet(){
@@ -3782,7 +3793,7 @@ function applyDbUpdate(){
     try{
       var wb=XLSX.read(_dbUpdateBuf,{type:'array'});
       var ws=wb.Sheets[wb.SheetNames[0]];
-      var newRows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      var newRows=mkStripEmptyCols(XLSX.utils.sheet_to_json(ws,{defval:''}));
       // Объединяем: existing + new, dedup по Код 1С keep=last
       var combined=(S.bdRows||[]).concat(newRows);
       var seen={};
@@ -3876,7 +3887,7 @@ function loadBuiltinBd(){
       for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
       var wb = XLSX.read(bytes.buffer,{type:'array'});
       var ws = wb.Sheets[wb.SheetNames[0]];
-      S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      S.bdRows = mkStripEmptyCols(XLSX.utils.sheet_to_json(ws,{defval:''}));
       S.bdName = 'БД кофе.xlsx';
       _mkBdTs=0;
     }catch(e){ console.error('BD load error',e); }
@@ -3967,7 +3978,7 @@ function loadBuiltinBd(){
       for(var i=0;i<binStr.length;i++) bytes[i]=binStr.charCodeAt(i);
       var wb = XLSX.read(bytes.buffer,{type:'array'});
       var ws = wb.Sheets[wb.SheetNames[0]];
-      S.bdRows = XLSX.utils.sheet_to_json(ws,{defval:''});
+      S.bdRows = mkStripEmptyCols(XLSX.utils.sheet_to_json(ws,{defval:''}));
       S.bdName = 'БД кофе.xlsx';
       _mkBdTs=0;
     }catch(e){ console.error('BD load error',e); }
