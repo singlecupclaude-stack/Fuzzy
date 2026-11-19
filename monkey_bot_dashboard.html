@@ -357,7 +357,7 @@ body::before{
   </div>
   <div class="login-box">
     <div class="l-logo"><span class="mk">MONKEY</span>🐒<span class="mk">BOT</span></div>
-    <div class="l-sub">система сборки заказов · v2.3.2</div>
+    <div class="l-sub">система сборки заказов · v2.3.3</div>
 
 
 
@@ -377,7 +377,7 @@ body::before{
 <!-- ════ APP ════ -->
 <div class="app" id="app">
   <div class="topbar">
-    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.3.2</span></div>
+    <div class="logo">🐒 <span><span class="mk">MONKEY</span>.BOT</span><span class="app-version">v2.3.3</span></div>
     <div class="tab-row">
       <button class="tb active" onclick="showTab('order',this);goStep('menu')">Главная</button>
       <button class="tb" onclick="showTab('order',this);goStep('platform')">Создать заказ</button>
@@ -395,7 +395,7 @@ body::before{
   </div>
 
   <div class="content">
-    <div class="build-watermark">v2.3.2</div>
+    <div class="build-watermark">v2.3.3</div>
 
     <!-- ══ TAB: ORDER ══ -->
     <div class="panel active" id="tab-order">
@@ -841,6 +841,7 @@ var USERS = {Singlecup:{pass:'Coffeepod',admin:true}};
 var MK_BD_LS='monkey_bd_v1';
 var MK_BD_SHEET='БД';   // лист с БД в вашей Google-таблице
 var MK_BD_SPREADSHEET='1kc4rhAdM88TJGUURuG7Qo6keq5OlzkoXpCqVTw_8jS0';   // ОТДЕЛЬНАЯ таблица только под БД (databasesccoffee@gmail.com, открыта по ссылке на чтение)
+var MK_BD_SCRIPT_URL='https://script.google.com/macros/s/AKfycby2rPc6yyaEiLUm-sU1-wK6XDKBx_WCpvwJdoU-6gZReLS7kcuHrQc0L1RiF_85pgsY7w/exec';   // Apps Script Web App (пишет БД в таблицу, без входа — публичный no-cors POST)
 var _mkBdTs=0;                 // метка времени текущей БД в памяти
 function mkSaveBdLocal(){
   try{ if(S.bdRows&&S.bdRows.length){ _mkBdTs=Date.now(); localStorage.setItem(MK_BD_LS,JSON.stringify({ts:_mkBdTs,name:S.bdName||'БД кофе.xlsx',rows:S.bdRows})); return true; } }catch(e){ console.warn('mkSaveBdLocal',e); }
@@ -937,12 +938,27 @@ async function mkWriteBdToSheet(){
   await sheetsRequestBd('POST','/values/'+encodeURIComponent(MK_BD_SHEET)+'!A1:ZZ:clear',{});
   await sheetsRequestBd('PUT','/values/'+encodeURIComponent(MK_BD_SHEET)+'!A1?valueInputOption=RAW',{values:values});
 }
-// Сохранить БД в общую таблицу. silent=true — без спиннера/варнингов (авто-пуш после обновления).
+// Сохранить БД в общую таблицу через Apps Script (без входа в Google — публичный no-cors POST).
+// silent=true — без спиннера/варнингов (авто-пуш после обновления).
 async function mkPushBd(silent){
-  if(!gsheetsToken){ if(!silent) toast('Сначала войдите в Google: кнопка «Sheets» вверху','warn'); return false; }
+  if(!S.bdRows||!S.bdRows.length){ if(!silent) toast('БД пустая — сначала загрузите файл БД','warn'); return false; }
   if(!silent) showSpinner('Сохраняем БД в Google…');
-  try{ await mkWriteBdToSheet(); toast('☁ БД сохранена в Google — её увидят все по ссылке','ok'); return true; }
-  catch(e){ toast('❌ Google: '+(e&&e.message||e),'err'); return false; }
+  try{
+    var want=S.bdRows.length;
+    var payload={ name:S.bdName||'БД кофе.xlsx', rows:S.bdRows };
+    await fetch(MK_BD_SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    // Ответ no-cors прочитать нельзя → подтверждаем записью-чтением из таблицы.
+    var ok=false;
+    for(var a=0;a<6;a++){
+      await new Promise(function(res){ setTimeout(res,1500); });
+      var back=null; try{ back=await mkReadBdFromSheet(); }catch(e){}
+      if(back&&back.length===want){ ok=true; break; }
+    }
+    if(ok){ if(!silent) toast('☁ БД сохранена в Google ('+want+' поз.) — её увидят все по ссылке','ok'); return true; }
+    if(!silent) toast('БД отправлена, но подтверждение пока не пришло. Через минуту нажмите «Синхронизировать из Google».','warn');
+    return false;
+  }
+  catch(e){ if(!silent) toast('❌ Отправка БД: '+(e&&e.message||e),'err'); return false; }
   finally{ if(!silent) hideSpinner(); }
 }
 
@@ -3728,7 +3744,7 @@ function renderDbSection(){
     +'<button class="db-action primary" onclick="adminGetDb()">⬇ СКАЧАТЬ БД КОФЕ.XLSX</button>'
     +'<button class="db-action" onclick="mkPushBd(false)" style="margin-top:10px">☁ СОХРАНИТЬ БД В GOOGLE (ДЛЯ ВСЕХ)</button>'
     +'<button class="db-action" onclick="mkSyncBdFromSheet(false)" style="margin-top:10px">🔄 СИНХРОНИЗИРОВАТЬ ИЗ GOOGLE</button>'
-    +'<div class="step-sub" style="margin:8px 2px 0;font-size:12px;line-height:1.5">💾 Загруженная БД сохраняется в браузере и не слетает после перезагрузки.<br>☁ Чтобы новую БД увидели <b>все по ссылке</b>: нажмите вверху <b>«Sheets»</b> и войдите в Google один раз, затем «Сохранить БД в Google». Данные лягут в лист «БД» вашей таблицы, и у всех при открытии подтянется свежая версия.<br>'+((typeof gsheetsToken!=='undefined'&&gsheetsToken)?'<span style=\'color:var(--ok)\'>✓ Google подключён — можно сохранять.</span>':'<span style=\'color:var(--dim)\'>Google пока не подключён — нажмите «Sheets» вверху.</span>')+'</div>'
+    +'<div class="step-sub" style="margin:8px 2px 0;font-size:12px;line-height:1.5">💾 Загруженная БД сохраняется в браузере и не слетает после перезагрузки.<br>☁ Чтобы новую БД увидели <b>все по ссылке</b>: нажмите <b>«Сохранить БД в Google (для всех)»</b> — вход в Google не нужен. Данные лягут в лист «БД» общей таблицы, и у всех при открытии подтянется свежая версия.</div>'
 
     +'<div class="db-card">'
     +'<div class="db-card-title" style="margin-bottom:10px">🔄 ОБНОВИТЬ БД</div>'
